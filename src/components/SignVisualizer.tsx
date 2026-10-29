@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, ShieldCheck, Info } from 'lucide-react';
 import type { ISLSignEntry } from '../ml/dictionaryData';
+import { RealisticHand3D } from './RealisticHand3D';
 
 interface SignVisualizerProps {
   entry: ISLSignEntry;
@@ -11,6 +12,7 @@ export const SignVisualizer: React.FC<SignVisualizerProps> = ({ entry, onComplet
   const [isPlaying, setIsPlaying] = useState(true);
   const [speed, setSpeed] = useState<number>(1);
   const [progress, setProgress] = useState<number>(0);
+  const [renderMode, setRenderMode] = useState<'3d' | 'vector'>('3d');
 
   // Playback timer loop
   useEffect(() => {
@@ -221,14 +223,53 @@ export const SignVisualizer: React.FC<SignVisualizerProps> = ({ entry, onComplet
         </div>
       </div>
 
-      {/* Visual Canvas Area */}
-      <div className="relative bg-gradient-to-b from-slate-900/5 to-slate-900/10 p-6 flex items-center justify-center min-h-[220px]">
-        <div className="w-52 h-52 relative drop-shadow-md">
-          {renderGestureGraphic()}
+      {/* Mode toggle: Realistic 3D Rig vs 2D Diagram */}
+      <div className="px-4 py-2 bg-slate-100/70 border-b border-slate-200/60 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-500 font-medium">Visualization:</span>
+          <button
+            onClick={() => setRenderMode('3d')}
+            className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+              renderMode === '3d'
+                ? 'bg-white text-brand-700 shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Realistic 3D Hand Rig
+          </button>
+          <button
+            onClick={() => setRenderMode('vector')}
+            className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
+              renderMode === 'vector'
+                ? 'bg-white text-brand-700 shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            2D Diagram
+          </button>
         </div>
+        <span className="text-[11px] text-slate-500 hidden sm:inline">
+          {entry.twoHanded ? 'Dual-Hand Articulation' : 'Single-Hand Articulation'}
+        </span>
+      </div>
+
+      {/* Visual Canvas Area */}
+      <div className="relative bg-gradient-to-b from-slate-900/5 to-slate-900/10 p-4 sm:p-6 flex flex-col items-center justify-center min-h-[260px]">
+        {renderMode === '3d' ? (
+          <RealisticHand3D
+            signLabel={entry.label}
+            progress={progress}
+            isTwoHanded={entry.twoHanded}
+            className="w-full max-w-md"
+          />
+        ) : (
+          <div className="w-52 h-52 relative drop-shadow-md">
+            {renderGestureGraphic()}
+          </div>
+        )}
 
         {/* Progress tracker bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-200">
+        <div className="w-full mt-3 h-1.5 bg-slate-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-brand-600 transition-all duration-75"
             style={{ width: `${progress}%` }}
@@ -261,7 +302,7 @@ export const SignVisualizer: React.FC<SignVisualizerProps> = ({ entry, onComplet
         {/* Speed Selector */}
         <div className="flex items-center gap-1 text-xs">
           <span className="text-slate-500 mr-1">Speed:</span>
-          {[0.5, 0.75, 1, 1.25].map((s) => (
+          {[0.25, 0.5, 0.75, 1, 1.25].map((s) => (
             <button
               key={s}
               onClick={() => setSpeed(s)}

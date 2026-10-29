@@ -9,11 +9,12 @@ import {
   CheckCircle2,
   Sliders,
   Sparkles,
-  BookOpen
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import { defaultClassifier, type ClassificationResult } from '../ml/islClassifier';
-import type { LandmarkPoint } from '../ml/featureExtractor';
+import type { LandmarkPoint, MotionData } from '../ml/featureExtractor';
 import { SparshaDataService } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,6 +38,12 @@ type CameraStatus =
   | 'insecure_origin'
   | 'model_error';
 
+interface HistoryPoint {
+  x: number;
+  y: number;
+  time: number;
+}
+
 export const GesturePredictorView: React.FC = () => {
   const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -46,18 +53,20 @@ export const GesturePredictorView: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [prediction, setPrediction] = useState<ClassificationResult | null>(null);
-  const [handDetected, setHandDetected] = useState<boolean>(false);
+  const [detectedHandCount, setDetectedHandCount] = useState<number>(0);
   const [threshold, setThreshold] = useState<number>(0.65);
   const [historySaved, setHistorySaved] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
 
-  // References for animation frame and stream
+  // References for animation frame, stream, and temporal tracking
   const animFrameIdRef = useRef<number | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const handLandmarkerRef = useRef<HandLandmarker | null>(null);
   const lastProcessedTimeRef = useRef<number>(0);
+  const lastHandSeenTimeRef = useRef<number>(0);
+  const wristHistoryRef = useRef<HistoryPoint[]>([]);
 
-  // Initialize MediaPipe HandLandmarker
+  // Initialize MediaPipe HandLandmarker with TWO-HAND support
   useEffect(() => {
     let active = true;
 
@@ -75,10 +84,10 @@ export const GesturePredictorView: React.FC = () => {
             delegate: 'GPU',
           },
           runningMode: 'VIDEO',
-          numHands: 1,
-          minHandDetectionConfidence: 0.6,
-          minHandPresenceConfidence: 0.6,
-          minTrackingConfidence: 0.6,
+          numHands: 2, // TWO HAND TRACKING ENABLED
+          minHandDetectionConfidence: 0.55,
+          minHandPresenceConfidence: 0.55,
+          minTrackingConfidence: 0.55,
         });
 
         if (active) {
@@ -87,7 +96,6 @@ export const GesturePredictorView: React.FC = () => {
         }
       } catch (err) {
         console.warn('Could not load online MediaPipe CDN model; fallback active:', err);
-        // Resilient fallback: model is ready with local geometric inference
         if (active) {
           setIsModelReady(true);
         }
@@ -128,13 +136,15 @@ export const GesturePredictorView: React.FC = () => {
       videoRef.current.srcObject = null;
     }
 
-    // Clear canvas
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
 
-    setHandDetected(false);
+    wristHistoryRef.current = [];
+    defaultClassifier.resetTemporalBuffer();
+    setDetectedHandCount(0);
+    setPrediction(null);
     setCameraStatus('idle');
   }, []);
 
@@ -145,11 +155,12 @@ export const GesturePredictorView: React.FC = () => {
     };
   }, [stopCamera]);
 
-  // Helper to draw landmarks and connections
-  const drawLandmarks = useCallback(
+  // Helper to draw dual hand landmarks and skeletal connections
+  const drawDualHands = useCallback(
     (
       ctx: CanvasRenderingContext2D,
-      landmarks: LandmarkPoint[],
+      primaryHand: LandmarkPoint[] | null,
+      secondaryHand: LandmarkPoint[] | null,
       width: number,
       height: number
     ) => {
@@ -159,37 +170,115 @@ export const GesturePredictorView: React.FC = () => {
         ctx.scale(-1, 1);
       }
 
-      ctx.strokeStyle = '#255ee7';
-      ctx.lineWidth = 3;
-      for (const [startIdx, endIdx] of HAND_CONNECTIONS) {
-        const p1 = landmarks[startIdx];
-        const p2 = landmarks[endIdx];
-        if (p1 && p2) {
+      const renderSkeleton = (
+        landmarks: LandmarkPoint[],
+        strokeColor: string,
+        jointColor: string
+      ) => {
+        // Draw skeletal bones
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 3.5;
+        for (const [startIdx, endIdx] of HAND_CONNECTIONS) {
+          const p1 = landmarks[startIdx];
+          const p2 = landmarks[endIdx];
+          if (p1 && p2) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x * width, p1.y * height);
+            ctx.lineTo(p2.x * width, p2.y * height);
+            ctx.stroke();
+          }
+        }
+
+        // Draw joint landmarks
+        for (let i = 0; i < landmarks.length; i++) {
+          const p = landmarks[i];
+          const x = p.x * width;
+          const y = p.y * height;
           ctx.beginPath();
-          ctx.moveTo(p1.x * width, p1.y * height);
-          ctx.lineTo(p2.x * width, p2.y * height);
+          ctx.arc(x, y, i === 0 ? 6.5 : 4, 0, 2 * Math.PI);
+          ctx.fillStyle = i === 0 ? '#ef4444' : jointColor;
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
           ctx.stroke();
+        }
+      };
+
+      // Draw primary (dominant) hand in vibrant brand blue
+      if (primaryHand && primaryHand.length === 21) {
+        renderSkeleton(primaryHand, '#255ee7', '#10b981');
+      }
+
+      // Draw secondary hand in rich purple/teal
+      if (secondaryHand && secondaryHand.length === 21) {
+        renderSkeleton(secondaryHand, '#9333ea', '#f59e0b');
+
+        // Draw inter-hand coordination bridge line
+        if (primaryHand && primaryHand.length === 21) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(primaryHand[0].x * width, primaryHand[0].y * height);
+          ctx.lineTo(secondaryHand[0].x * width, secondaryHand[0].y * height);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.restore();
         }
       }
 
-      for (let i = 0; i < landmarks.length; i++) {
-        const p = landmarks[i];
-        const x = p.x * width;
-        const y = p.y * height;
-        ctx.beginPath();
-        ctx.arc(x, y, i === 0 ? 6 : 4, 0, 2 * Math.PI);
-        ctx.fillStyle = i === 0 ? '#ef4444' : i % 4 === 0 ? '#10b981' : '#ffffff';
-        ctx.fill();
-        ctx.strokeStyle = '#1e3a8a';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
       ctx.restore();
     },
     [facingMode]
   );
 
-  // Frame processing loop
+  // Compute kinematic motion delta from recent wrist history
+  const computeKinematics = (wristPoint: LandmarkPoint, now: number): MotionData => {
+    const history = wristHistoryRef.current;
+    history.push({ x: wristPoint.x, y: wristPoint.y, time: now });
+
+    // Keep history strictly within last 350ms (~10 frames)
+    while (history.length > 0 && now - history[0].time > 350) {
+      history.shift();
+    }
+
+    if (history.length < 2) {
+      return { dx: 0, dy: 0, tipSpeed: 0, oscX: 0, oscY: 0 };
+    }
+
+    const first = history[0];
+    const latest = history[history.length - 1];
+    const dx = latest.x - first.x;
+    const dy = latest.y - first.y;
+    const dt = Math.max(0.01, (latest.time - first.time) / 1000.0);
+
+    const speed = Math.sqrt(dx * dx + dy * dy) / dt;
+
+    // Measure oscillation (variance around mean)
+    let meanX = 0, meanY = 0;
+    for (const p of history) {
+      meanX += p.x;
+      meanY += p.y;
+    }
+    meanX /= history.length;
+    meanY /= history.length;
+
+    let varX = 0, varY = 0;
+    for (const p of history) {
+      varX += (p.x - meanX) * (p.x - meanX);
+      varY += (p.y - meanY) * (p.y - meanY);
+    }
+
+    return {
+      dx,
+      dy,
+      tipSpeed: Math.min(1.0, speed * 0.5),
+      oscX: Math.min(1.0, Math.sqrt(varX) * 10),
+      oscY: Math.min(1.0, Math.sqrt(varY) * 10)
+    };
+  };
+
+  // Main video frame processing loop
   useEffect(() => {
     let animId: number;
 
@@ -211,20 +300,60 @@ export const GesturePredictorView: React.FC = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         const now = performance.now();
+
+        // Process inference at ~30 FPS
         if (now - lastProcessedTimeRef.current >= 33) {
           lastProcessedTimeRef.current = now;
 
           if (handLandmarkerRef.current) {
             try {
               const results = handLandmarkerRef.current.detectForVideo(video, now);
-              if (results.landmarks && results.landmarks.length > 0) {
-                setHandDetected(true);
-                const landmarks = results.landmarks[0] as LandmarkPoint[];
-                drawLandmarks(ctx, landmarks, canvas.width, canvas.height);
-                const res = defaultClassifier.classifyLandmarks(landmarks);
+              const numDetected = results.landmarks ? results.landmarks.length : 0;
+              setDetectedHandCount(numDetected);
+
+              if (numDetected > 0 && results.landmarks) {
+                lastHandSeenTimeRef.current = now;
+
+                // Associate hands deterministically using handedness tags
+                let primary: LandmarkPoint[] | null = null;
+                let secondary: LandmarkPoint[] | null = null;
+
+                const handednesses = results.handednesses || [];
+
+                if (numDetected === 1) {
+                  primary = results.landmarks[0] as LandmarkPoint[];
+                } else if (numDetected >= 2) {
+                  // Two hands detected: assign Right as primary, Left as secondary
+                  const h0 = handednesses[0]?.[0]?.categoryName || 'Right';
+                  // In user mirrored mode, invert label
+                  const isUser = facingMode === 'user';
+                  const phys0 = isUser ? (h0 === 'Left' ? 'Right' : 'Left') : h0;
+
+                  if (phys0 === 'Right') {
+                    primary = results.landmarks[0] as LandmarkPoint[];
+                    secondary = results.landmarks[1] as LandmarkPoint[];
+                  } else {
+                    primary = results.landmarks[1] as LandmarkPoint[];
+                    secondary = results.landmarks[0] as LandmarkPoint[];
+                  }
+                }
+
+                // Render dual hand skeletons
+                drawDualHands(ctx, primary, secondary, canvas.width, canvas.height);
+
+                // Compute temporal motion
+                const motion = primary ? computeKinematics(primary[0], now) : undefined;
+
+                // Execute multi-hand neural inference
+                const res = defaultClassifier.classifyMultiHand(primary, secondary, motion);
                 setPrediction(res);
               } else {
-                setHandDetected(false);
+                // When hands leave frame, clear prediction after 1.2s timeout to prevent stale locks
+                if (now - lastHandSeenTimeRef.current > 1200) {
+                  setPrediction(null);
+                  defaultClassifier.resetTemporalBuffer();
+                  wristHistoryRef.current = [];
+                }
               }
             } catch (e) {
               console.warn('Frame processing exception:', e);
@@ -243,11 +372,10 @@ export const GesturePredictorView: React.FC = () => {
     return () => {
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [cameraStatus, drawLandmarks]);
+  }, [cameraStatus, drawDualHands, facingMode]);
 
   // Start Camera
   const startCamera = async () => {
-    // Check HTTPS security
     if (
       location.protocol !== 'https:' &&
       location.hostname !== 'localhost' &&
@@ -293,24 +421,15 @@ export const GesturePredictorView: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Camera access error:', err);
-      if (
-        err.name === 'NotAllowedError' ||
-        err.name === 'PermissionDeniedError'
-      ) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         setCameraStatus('permission_denied');
         setErrorMessage(
           'Camera permission was denied. Please allow camera access in your browser settings to continue.'
         );
-      } else if (
-        err.name === 'NotFoundError' ||
-        err.name === 'DevicesNotFoundError'
-      ) {
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
         setCameraStatus('not_found');
         setErrorMessage('No camera device was detected on your hardware.');
-      } else if (
-        err.name === 'NotReadableError' ||
-        err.name === 'TrackStartError'
-      ) {
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
         setCameraStatus('already_in_use');
         setErrorMessage(
           'Your camera may already be in use by another application or browser tab.'
@@ -337,7 +456,7 @@ export const GesturePredictorView: React.FC = () => {
       user.id,
       prediction.label,
       prediction.confidence,
-      user.preferredHand === 'left' ? 'left' : 'right'
+      prediction.isTwoHanded ? 'right' : (user.preferredHand === 'left' ? 'left' : 'right')
     );
     setHistorySaved(true);
   };
@@ -352,7 +471,7 @@ export const GesturePredictorView: React.FC = () => {
               Hand Gesture → AI Prediction
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 border border-brand-200">
-              ISL Validated Model v1
+              ISL Two-Hand Model v2
             </span>
             <span
               className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${
@@ -365,7 +484,7 @@ export const GesturePredictorView: React.FC = () => {
             </span>
           </div>
           <p className="text-sm text-slate-600 mt-1">
-            Detect real-time Indian Sign Language gestures using on-device computer vision.
+            Real-time on-device single-hand and two-hand Indian Sign Language recognition with temporal kinematic tracking.
           </p>
         </div>
 
@@ -373,7 +492,7 @@ export const GesturePredictorView: React.FC = () => {
         <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs text-emerald-900 shrink-0">
           <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>
-            <strong>100% On-Device Privacy:</strong> Video frames are analyzed locally in browser memory.
+            <strong>100% On-Device Privacy:</strong> Video frames stay strictly in local memory.
           </span>
         </div>
       </div>
@@ -405,18 +524,31 @@ export const GesturePredictorView: React.FC = () => {
             {/* Hand presence indicator */}
             {cameraStatus === 'running' && (
               <div
-                className={`absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 backdrop-blur-md ${
-                  handDetected
-                    ? 'bg-emerald-500/80 text-white'
+                className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 backdrop-blur-md ${
+                  detectedHandCount === 2
+                    ? 'bg-purple-600/90 text-white shadow-sm'
+                    : detectedHandCount === 1
+                    ? 'bg-emerald-600/90 text-white shadow-sm'
                     : 'bg-slate-800/80 text-slate-300'
                 }`}
               >
                 <div
                   className={`w-2 h-2 rounded-full ${
-                    handDetected ? 'bg-white animate-pulse' : 'bg-slate-400'
+                    detectedHandCount > 0 ? 'bg-white animate-pulse' : 'bg-slate-400'
                   }`}
                 />
-                <span>{handDetected ? 'Hand Tracking Active' : 'Align Hand In Frame'}</span>
+                <span className="flex items-center gap-1">
+                  {detectedHandCount === 2 ? (
+                    <>
+                      <Users className="w-3.5 h-3.5" />
+                      <span>2 Hands Tracked (Coordinated ISL Mode)</span>
+                    </>
+                  ) : detectedHandCount === 1 ? (
+                    <span>1 Hand Detected</span>
+                  ) : (
+                    <span>Align Hand(s) In Frame</span>
+                  )}
+                </span>
               </div>
             )}
 
@@ -430,7 +562,7 @@ export const GesturePredictorView: React.FC = () => {
                     </div>
                     <h3 className="font-semibold text-lg">Camera is Inactive</h3>
                     <p className="text-xs text-slate-400">
-                      Click “Start Camera” below to begin real-time gesture recognition. Frames remain strictly on-device.
+                      Click “Start Camera” below to begin real-time gesture recognition. Supports both single-hand and two-hand signs.
                     </p>
                   </div>
                 )}
@@ -526,6 +658,7 @@ export const GesturePredictorView: React.FC = () => {
                   onClick={() => {
                     setPrediction(null);
                     setHistorySaved(false);
+                    defaultClassifier.resetTemporalBuffer();
                   }}
                   className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1"
                 >
@@ -558,21 +691,28 @@ export const GesturePredictorView: React.FC = () => {
                         {prediction.displayName}
                       </h4>
                     </div>
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        prediction.isRecognized
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : 'bg-amber-100 text-amber-800'
-                      }`}
-                    >
-                      {prediction.isRecognized ? 'Validated ISL' : 'Below Threshold'}
-                    </span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          prediction.isRecognized
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {prediction.isRecognized ? 'Validated ISL' : 'Below Threshold'}
+                      </span>
+                      {prediction.isTwoHanded && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          Two-Hand Sign
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Confidence Bar */}
                   <div className="mt-4 space-y-1.5">
                     <div className="flex justify-between text-xs font-medium">
-                      <span className="text-slate-600">Confidence Calibration:</span>
+                      <span className="text-slate-600">Calibrated Probability:</span>
                       <span className="font-mono text-slate-800 font-bold">
                         {(prediction.confidence * 100).toFixed(1)}%
                       </span>
@@ -594,7 +734,7 @@ export const GesturePredictorView: React.FC = () => {
                   )}
                 </div>
 
-                {/* Save to History Button (Real record generation) */}
+                {/* Save to History Button */}
                 {prediction.isRecognized && user && (
                   <div>
                     {historySaved ? (
@@ -618,19 +758,35 @@ export const GesturePredictorView: React.FC = () => {
               <div className="text-center py-8 text-slate-400 space-y-2">
                 <p className="text-sm">No gesture detected yet.</p>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                  Start the camera and position your hand clearly in front of the lens. Try signs like Namaste, Hello, Yes, or Numbers 1-5.
+                  Start the camera and show a single-hand sign (e.g. Hello, Yes, Numbers 1–5) or a two-hand sign (e.g. Namaste, Help, Doctor).
                 </p>
               </div>
             )}
 
-            {/* Model & Scientific Grounding Disclaimer */}
+            {/* Supported Vocabulary Guide */}
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100 space-y-2 text-xs text-slate-500 leading-relaxed">
-              <div className="font-semibold text-slate-700 flex items-center gap-1">
-                <span>Model Calibration & Integrity</span>
+              <div className="font-semibold text-slate-700 flex items-center justify-between">
+                <span>Supported Two-Hand & Single-Hand Signs</span>
+                <span className="text-[11px] font-normal text-brand-600">20 ISLRTC Classes</span>
               </div>
-              <p>
-                SPARSHA does not map arbitrary webcam gestures to sign language. Only gestures matching the validated <strong>ISLRTC Indian Sign Language</strong> geometric landmark distributions are recognized. Uncalibrated poses or gestures outside the vocabulary return <em>“Not recognized”</em>.
-              </p>
+              <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[11px]">
+                <div className="space-y-0.5">
+                  <span className="font-bold text-slate-700 block text-[10px] uppercase">Two-Hand Signs</span>
+                  <span>• Namaste (Greetings)</span><br />
+                  <span>• Help (Emergency)</span><br />
+                  <span>• Doctor (Medical)</span><br />
+                  <span>• Thank You (Courtesy)</span><br />
+                  <span>• Please (Polite)</span>
+                </div>
+                <div className="space-y-0.5">
+                  <span className="font-bold text-slate-700 block text-[10px] uppercase">Single-Hand Signs</span>
+                  <span>• Hello, Yes, No</span><br />
+                  <span>• Good, Bad, Peace</span><br />
+                  <span>• Super (OK), I Love You</span><br />
+                  <span>• Numbers 1, 2, 3, 4, 5</span><br />
+                  <span>• Water (Sipping tilt)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

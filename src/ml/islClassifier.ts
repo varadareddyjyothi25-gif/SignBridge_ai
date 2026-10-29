@@ -1,5 +1,9 @@
 import modelWeights from './model_weights.json';
-import { extractHandFeatures, type LandmarkPoint } from './featureExtractor';
+import {
+  extractMultiHandFeatures,
+  type LandmarkPoint,
+  type MotionData
+} from './featureExtractor';
 import { VALIDATED_ISL_DICTIONARY, type ISLSignEntry } from './dictionaryData';
 
 export interface ClassificationResult {
@@ -9,11 +13,12 @@ export interface ClassificationResult {
   isRecognized: boolean;
   category?: string;
   description?: string;
+  isTwoHanded?: boolean;
   matchedEntry?: ISLSignEntry;
   rawProbabilities?: { [key: string]: number };
 }
 
-// In-browser feedforward neural network inference
+// In-browser feedforward neural network inference with multi-hand support & temporal smoothing
 export class ISLLandmarkClassifier {
   private weights0: number[][];
   private biases0: number[];
@@ -21,10 +26,16 @@ export class ISLLandmarkClassifier {
   private biases1: number[];
   private classes: string[];
   private rejectionThreshold: number;
+  private marginThreshold: number;
+
+  // Temporal smoothing ring buffer (last 5 predictions)
+  private predictionBuffer: string[] = [];
+  private readonly BUFFER_SIZE = 5;
 
   constructor(threshold: number = 0.65) {
     this.classes = modelWeights.classes;
     this.rejectionThreshold = threshold;
+    this.marginThreshold = 0.15;
     this.weights0 = modelWeights.layers[0].weights;
     this.biases0 = modelWeights.layers[0].biases;
     this.weights1 = modelWeights.layers[1].weights;
@@ -39,10 +50,31 @@ export class ISLLandmarkClassifier {
     return this.rejectionThreshold;
   }
 
-  public classifyLandmarks(landmarks: LandmarkPoint[]): ClassificationResult {
-    const features = extractHandFeatures(landmarks);
+  public resetTemporalBuffer(): void {
+    this.predictionBuffer = [];
+  }
 
-    // Layer 1: Dense 51 -> 64 with ReLU activation
+  /**
+   * Classifies multi-hand inputs with inter-hand spatial geometry and temporal motion.
+   */
+  public classifyMultiHand(
+    primaryHand: LandmarkPoint[] | null | undefined,
+    secondaryHand?: LandmarkPoint[] | null,
+    motion?: MotionData
+  ): ClassificationResult {
+    if (!primaryHand || primaryHand.length !== 21) {
+      this.resetTemporalBuffer();
+      return {
+        label: 'UNKNOWN',
+        displayName: 'No hand detected',
+        confidence: 0.0,
+        isRecognized: false,
+      };
+    }
+
+    const features = extractMultiHandFeatures(primaryHand, secondaryHand, motion);
+
+    // Layer 1: Dense 118 -> 128 with ReLU activation
     const hiddenSize = this.biases0.length;
     const hidden = new Array<number>(hiddenSize);
     for (let j = 0; j < hiddenSize; j++) {
@@ -53,7 +85,7 @@ export class ISLLandmarkClassifier {
       hidden[j] = Math.max(0, sum); // ReLU
     }
 
-    // Layer 2: Dense 64 -> N_CLASSES with Softmax activation
+    // Layer 2: Dense 128 -> N_CLASSES with Softmax activation
     const numClasses = this.classes.length;
     const logits = new Array<number>(numClasses);
     let maxLogit = -Infinity;
@@ -96,17 +128,45 @@ export class ISLLandmarkClassifier {
     }
 
     const margin = maxProb - secondMaxProb;
-    const predictedClass = this.classes[bestIdx];
+    let rawPredictedClass = this.classes[bestIdx];
 
     // Rejection policy:
-    // 1. Max probability below configured rejection threshold
-    // 2. Ambiguous gesture (margin between top-1 and top-2 is too narrow < 0.15)
-    // 3. Classified into the explicit UNKNOWN out-of-distribution class
+    // 1. Max probability below configured threshold
+    // 2. Margin between top 2 classes is too narrow
+    // 3. Classified as UNKNOWN
     if (
       maxProb < this.rejectionThreshold ||
-      margin < 0.15 ||
-      predictedClass === 'UNKNOWN'
+      margin < this.marginThreshold ||
+      rawPredictedClass === 'UNKNOWN'
     ) {
+      rawPredictedClass = 'UNKNOWN';
+    }
+
+    // Temporal consensus smoothing:
+    this.predictionBuffer.push(rawPredictedClass);
+    if (this.predictionBuffer.length > this.BUFFER_SIZE) {
+      this.predictionBuffer.shift();
+    }
+
+    // Determine consensus class across buffer
+    const counts: { [label: string]: number } = {};
+    for (const label of this.predictionBuffer) {
+      counts[label] = (counts[label] || 0) + 1;
+    }
+
+    let consensusClass = 'UNKNOWN';
+    let maxCount = 0;
+    for (const [lbl, count] of Object.entries(counts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        consensusClass = lbl;
+      }
+    }
+
+    // Require majority consensus (at least 3 of 5 frames) to switch or confirm recognized state
+    const finalClass = maxCount >= 3 ? consensusClass : 'UNKNOWN';
+
+    if (finalClass === 'UNKNOWN') {
       return {
         label: 'UNKNOWN',
         displayName: 'Not recognized',
@@ -117,21 +177,31 @@ export class ISLLandmarkClassifier {
     }
 
     const matchedEntry = VALIDATED_ISL_DICTIONARY.find(
-      d => d.label.toUpperCase() === predictedClass.toUpperCase()
+      (d) => d.label.toUpperCase() === finalClass.toUpperCase()
     );
 
-    const displayName = matchedEntry ? matchedEntry.englishPhrase.split('/')[0].trim() : predictedClass.replace(/_/g, ' ');
+    const displayName = matchedEntry
+      ? matchedEntry.englishPhrase.split('/')[0].trim()
+      : finalClass.replace(/_/g, ' ');
 
     return {
-      label: predictedClass,
+      label: finalClass,
       displayName,
       confidence: maxProb,
       isRecognized: true,
       category: matchedEntry?.category,
       description: matchedEntry?.description,
+      isTwoHanded: matchedEntry?.twoHanded,
       matchedEntry,
       rawProbabilities: rawProbs,
     };
+  }
+
+  /**
+   * Single-hand backward compatibility method.
+   */
+  public classifyLandmarks(landmarks: LandmarkPoint[]): ClassificationResult {
+    return this.classifyMultiHand(landmarks, null);
   }
 }
 

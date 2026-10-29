@@ -44,3 +44,21 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 });
+
+// Mock HTMLCanvasElement 2D context for jsdom
+HTMLCanvasElement.prototype.getContext = (() => ({
+  clearRect: () => {},
+  save: () => {},
+  restore: () => {},
+  scale: () => {},
+  beginPath: () => {},
+  closePath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  stroke: () => {},
+  fill: () => {},
+  arc: () => {},
+  ellipse: () => {},
+  createLinearGradient: () => ({ addColorStop: () => {} }),
+  createRadialGradient: () => ({ addColorStop: () => {} }),
+})) as unknown as typeof HTMLCanvasElement.prototype.getContext;
