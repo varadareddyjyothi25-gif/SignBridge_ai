@@ -7,8 +7,7 @@ import {
   LogOut,
   Database,
   Menu,
-  X,
-  Sparkles
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
@@ -49,8 +48,8 @@ export const Navigation: React.FC<NavigationProps> = ({
           onClick={() => onNavigate(user ? 'home' : 'welcome')}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-            <Sparkles className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 p-0.5 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+            <img src="/logo.png" alt="SPARSHA Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">

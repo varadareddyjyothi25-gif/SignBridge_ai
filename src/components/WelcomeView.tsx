@@ -16,6 +16,11 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
     <div className="space-y-12 py-6 md:py-10">
       {/* Hero Section */}
       <div className="text-center max-w-3xl mx-auto space-y-5 px-4">
+        {/* Brand Emblem */}
+        <div className="w-24 h-24 mx-auto rounded-3xl bg-white p-2.5 shadow-md border border-slate-200/80 hover:scale-105 transition-transform flex items-center justify-center">
+          <img src="/logo.png" alt="SPARSHA Logo" className="w-full h-full object-contain" />
+        </div>
+
         {/* Brand Badge */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-50 border border-brand-200 text-brand-800 text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5 text-brand-600" />

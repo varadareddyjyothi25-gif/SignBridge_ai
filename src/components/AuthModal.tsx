@@ -94,8 +94,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Modal Title */}
-        <div className="mb-6">
+        {/* Modal Title & Brand */}
+        <div className="mb-6 text-center">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-white p-1 border border-slate-200/80 shadow-sm flex items-center justify-center mb-3">
+            <img src="/logo.png" alt="SPARSHA Logo" className="w-full h-full object-contain" />
+          </div>
           <h2 id="auth-modal-title" className="text-2xl font-bold text-slate-900">
             {mode === 'signin' && 'Sign In to SPARSHA'}
             {mode === 'signup' && 'Create Your Account'}
