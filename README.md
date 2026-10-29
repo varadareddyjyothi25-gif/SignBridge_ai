@@ -16,32 +16,29 @@ SPARSHA is an accessible, privacy-centric AI platform connecting spoken/written 
                                            /                                    \
                                           v                                      v
             +-------------------------------------------+          +-----------------------------------------+
-            |      Hand Gesture -> AI Prediction        |          |            Text -> Hand Sign            |
+            |      Hand Gesture -> AI Prediction        |          |          Sign Learning Library          |
             +-------------------------------------------+          +-----------------------------------------+
-            | - WebCam API (MediaDevices.getUserMedia)  |          | - Verified ISLRTC Dictionary Lookup     |
-            | - MediaPipe Vision (21 3D Landmarks)      |          | - 3D/Kinematic Vector Visualizer        |
-            | - Translation/Scale Invariant Normalizer  |          | - Variable Speed Playback (0.5x - 1.25x)|
-            | - In-Browser MLP Neural Network           |          | - Step-by-Step Anatomical Breakdown     |
-            | - Calibrated Rejection Threshold (0.65)   |          | - Clear Unsupported-Phrase Safeguard    |
+            | - WebCam API (MediaDevices.getUserMedia)  |          | - Verified ISLRTC Dictionary Standards  |
+            | - MediaPipe Vision (21 3D Landmarks)      |          | - Realistic 3D Human Hand Model         |
+            | - Translation/Scale Invariant Normalizer  |          | - Interactive Orbit & Skin Tones        |
+            | - In-Browser MLP Neural Network           |          | - Variable Speed Playback (0.5x - 1.25x)|
+            | - Calibrated Rejection Threshold (0.65)   |          | - Categorized ISL Corpus & Practice     |
             | - 100% On-Device Memory Processing        |          +-----------------------------------------+
             +-------------------------------------------+                               |
-                                  |                                                     v
-                                  |                                        +-------------------------+
-                                  +--------------------------------------->|     Sign Library        |
-                                                                           | Categorized ISL Corpus  |
-                                                                           +-------------------------+
-                                                                                        |
-                                                                                        v
-                                                                           +-------------------------+
-                                                                           |     User Dashboard      |
-                                                                           | Real Records & Privacy  |
-                                                                           +-------------------------+
-                                                                                        |
-                                                                                        v
-                                                                           +-------------------------+
-                                                                           | Supabase PostgreSQL RLS |
-                                                                           |   (or Local Sandbox)    |
-                                                                           +-------------------------+
+                                  |                                                     |
+                                  +-----------------------------------------------------+
+                                                            |
+                                                            v
+                                               +-------------------------+
+                                               |     User Dashboard      |
+                                               | Real Records & Privacy  |
+                                               +-------------------------+
+                                                            |
+                                                            v
+                                               +-------------------------+
+                                               | Supabase PostgreSQL RLS |
+                                               |   (or Local Sandbox)    |
+                                               +-------------------------+
 ```
 
 ---
@@ -55,24 +52,19 @@ SPARSHA is an accessible, privacy-centric AI platform connecting spoken/written 
    - **Rejection Policy:** Gestures outside the validated ISL training distribution or with ambiguous margins return *“Not recognized”*.
    - Responsive front/rear camera toggle, clean resource deallocation on unmount, and zero server frame uploads.
 
-2. **Text → Hand Sign Converter**
-   - Instant search across English and Hindi vocabulary.
-   - Interactive, accessible vector player with play, pause, replay, and speed controls (0.5x, 0.75x, 1x, 1.25x).
-   - Step-by-step anatomical guidance: hand shape, orientation, and kinematic motion.
-   - **Linguistic Integrity:** Explicit disclaimers clarifying that dictionary sign lookups do not imply synthetic full-sentence translation.
-
-3. **Sign Learning Library**
+2. **Sign Learning Library**
    - Searchable, categorized repository (Greetings, Essentials, Emergency, Numbers, Everyday, Feelings).
+   - Realistic 3D articulated human hand models with Three.js PBR rendering and skin tone choices.
    - Full provenance citation for each sign grounded in the **Indian Sign Language Research and Training Centre (ISLRTC)** standards.
    - Practice tracking recording completed modules.
 
-4. **User Dashboard & Authentic Telemetry**
+3. **User Dashboard & Authentic Telemetry**
    - Authentic statistics computed from real stored database records (no fabricated metrics).
    - Personal recognition history with confidence percentages and timestamps.
    - Bookmarked signs and learning activities.
    - Strict privacy controls: opt-in recognition history logging and one-click permanent history deletion.
 
-5. **Supabase Integration & Offline Sandbox**
+4. **Supabase Integration & Offline Sandbox**
    - Secure authentication via Supabase Auth (email verification, password reset, session persistence).
    - PostgreSQL schema with Row Level Security (RLS) on all tables (`profiles`, `recognition_history`, `saved_signs`, `sign_dictionary`).
    - Seamless local sandbox fallback allowing full offline evaluation even before live Supabase credentials are configured.
@@ -95,9 +87,10 @@ final project/
 │   │   ├── WelcomeView.tsx             # Onboarding & scope overview
 │   │   ├── HomeView.tsx                # Authenticated home with prominent modules
 │   │   ├── GesturePredictorView.tsx    # Live camera & landmark inference
-│   │   ├── TextToSignView.tsx          # Text lookup & visualizer
 │   │   ├── LearningLibraryView.tsx     # Categorized sign directory
-│   │   ├── SignVisualizer.tsx          # Dynamic SVG animation player
+│   │   ├── RealisticSignViewer.tsx     # 3D realistic human hand viewer
+│   │   ├── RealisticHand3D.tsx         # Articulated Three.js procedural hand mesh
+│   │   ├── SignVisualizer.tsx          # Dynamic SVG animation player fallback
 │   │   ├── DashboardView.tsx           # Telemetry, history, and privacy settings
 │   │   └── AuthModal.tsx               # Supabase sign up, sign in, reset modal
 │   ├── context/                        # React Contexts

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Type, BookOpen, ShieldCheck, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Camera, BookOpen, ShieldCheck, ArrowRight, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface WelcomeViewProps {
   onGetStarted: () => void;
@@ -71,7 +71,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
       </div>
 
       {/* Core Features Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto px-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto px-4">
         {/* Feature 1 */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
@@ -93,28 +93,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
           </ul>
         </div>
 
-        {/* Feature 2 */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-          <div className="w-12 h-12 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-            <Type className="w-6 h-6" />
-          </div>
-          <h3 className="font-bold text-slate-900 text-lg">Text → Hand Sign</h3>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Look up English and Hindi words to inspect verified 3D kinematic hand gestures with step-by-step palm, joint, and finger breakdown.
-          </p>
-          <ul className="text-xs text-slate-500 space-y-1.5 pt-2">
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Variable playback speed (0.5x – 1.25x)</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Honest unsupported phrase alerts</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Feature 3 */}
+        {/* Feature 2: Sign Learning Library */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
             <BookOpen className="w-6 h-6" />

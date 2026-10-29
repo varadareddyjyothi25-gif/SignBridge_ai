@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { RealisticSignViewer } from '../components/RealisticSignViewer';
 import { isWebGLAvailable, SKIN_TONES } from '../types/sign3d';
 import { SignVisualizer } from '../components/SignVisualizer';
-import { TextToSignView } from '../components/TextToSignView';
 import { VALIDATED_ISL_DICTIONARY } from '../ml/dictionaryData';
 import { getSignKinematics } from '../components/RealisticHand3D';
-import { AuthProvider } from '../context/AuthContext';
 
 describe('Realistic Human Hand Sign Animation & Viewer', () => {
   const namasteSign = VALIDATED_ISL_DICTIONARY.find((s) => s.label === 'NAMASTE')!;
@@ -92,27 +90,5 @@ describe('Realistic Human Hand Sign Animation & Viewer', () => {
 
     // Provenance
     expect(screen.getByText(/ISLRTC Indian Sign Language Standard Corpus/i)).toBeInTheDocument();
-  });
-
-  it('TextToSignView validates text input and displays matching sign or "Sign Not Available Yet"', () => {
-    render(
-      <AuthProvider>
-        <TextToSignView />
-      </AuthProvider>
-    );
-
-    const input = screen.getByPlaceholderText(/type an english or hindi word/i);
-    const searchBtn = screen.getByRole('button', { name: 'Search' });
-
-    // Valid search
-    fireEvent.change(input, { target: { value: 'Help' } });
-    fireEvent.click(searchBtn);
-    expect(screen.getAllByText(/Help \/ Assistance/i).length).toBeGreaterThanOrEqual(1);
-
-    // Unsupported word
-    fireEvent.change(input, { target: { value: 'Cryptocurrency' } });
-    fireEvent.click(searchBtn);
-    expect(screen.getByText(/Sign Not Available Yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/does not generate synthetic or unverified hand signs/i)).toBeInTheDocument();
   });
 });

@@ -15,11 +15,11 @@ import {
   type RecognitionHistoryItem,
   type SavedSignItem
 } from '../lib/supabase';
-import { VALIDATED_ISL_DICTIONARY, type ISLSignEntry } from '../ml/dictionaryData';
+import { VALIDATED_ISL_DICTIONARY } from '../ml/dictionaryData';
 import { useAuth } from '../context/AuthContext';
 
-export const DashboardView: React.FC<{ onNavigateToSign?: (sign: ISLSignEntry) => void }> = ({
-  onNavigateToSign
+export const DashboardView: React.FC<{ onNavigateToLibrary?: () => void }> = ({
+  onNavigateToLibrary
 }) => {
   const { user, updateProfile } = useAuth();
   const [history, setHistory] = useState<RecognitionHistoryItem[]>([]);
@@ -233,14 +233,14 @@ export const DashboardView: React.FC<{ onNavigateToSign?: (sign: ISLSignEntry) =
 
             {savedEntriesWithDetails.length === 0 ? (
               <p className="text-xs text-slate-400 py-4 text-center">
-                No signs saved yet. Bookmark signs from Text → Hand Sign or the Learning Library to review later.
+                No signs saved yet. Bookmark signs from the Learning Library to review later.
               </p>
             ) : (
               <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                 {savedEntriesWithDetails.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => onNavigateToSign && item.entry && onNavigateToSign(item.entry)}
+                    onClick={() => onNavigateToLibrary && onNavigateToLibrary()}
                     className="p-2.5 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 cursor-pointer transition-colors flex items-center justify-between text-xs"
                   >
                     <div>
@@ -251,7 +251,7 @@ export const DashboardView: React.FC<{ onNavigateToSign?: (sign: ISLSignEntry) =
                         {item.entry?.category}
                       </span>
                     </div>
-                    <span className="text-[11px] text-brand-600 font-medium">Practice →</span>
+                    <span className="text-[11px] text-brand-600 font-medium">Review in Library →</span>
                   </div>
                 ))}
               </div>

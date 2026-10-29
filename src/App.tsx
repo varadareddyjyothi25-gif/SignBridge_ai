@@ -4,13 +4,12 @@ import { Navigation, type ActiveTab } from './components/Navigation';
 import { WelcomeView } from './components/WelcomeView';
 import { HomeView } from './components/HomeView';
 import { GesturePredictorView } from './components/GesturePredictorView';
-import { TextToSignView } from './components/TextToSignView';
 import { LearningLibraryView } from './components/LearningLibraryView';
 import { DashboardView } from './components/DashboardView';
 import { AuthModal } from './components/AuthModal';
 import { Shield } from 'lucide-react';
 
-const VALID_TABS: ActiveTab[] = ['welcome', 'home', 'gesture', 'text', 'library', 'dashboard'];
+const VALID_TABS: ActiveTab[] = ['welcome', 'home', 'gesture', 'library', 'dashboard'];
 const PROTECTED_TABS: ActiveTab[] = ['home', 'dashboard'];
 
 const parseHashTab = (): ActiveTab => {
@@ -126,15 +125,13 @@ const AppContent: React.FC = () => {
         return <HomeView onNavigate={handleNavigate} />;
       case 'gesture':
         return <GesturePredictorView />;
-      case 'text':
-        return <TextToSignView />;
       case 'library':
         return <LearningLibraryView />;
       case 'dashboard':
         return (
           <DashboardView
-            onNavigateToSign={() => {
-              handleNavigate('text');
+            onNavigateToLibrary={() => {
+              handleNavigate('library');
             }}
           />
         );

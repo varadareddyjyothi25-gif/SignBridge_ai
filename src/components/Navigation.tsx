@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   Camera,
-  Type,
   BookOpen,
   LayoutDashboard,
   LogOut,
@@ -13,7 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 
-export type ActiveTab = 'welcome' | 'home' | 'gesture' | 'text' | 'library' | 'dashboard';
+export type ActiveTab = 'welcome' | 'home' | 'gesture' | 'library' | 'dashboard';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -52,7 +51,6 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   const navItems = [
     { id: 'gesture' as ActiveTab, label: 'Hand Gesture AI', icon: Camera },
-    { id: 'text' as ActiveTab, label: 'Text → Sign', icon: Type },
     { id: 'library' as ActiveTab, label: 'ISL Library', icon: BookOpen },
     ...(user ? [{ id: 'dashboard' as ActiveTab, label: 'Dashboard', icon: LayoutDashboard }] : []),
   ];
