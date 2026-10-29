@@ -10,7 +10,11 @@ import {
   Sliders,
   Sparkles,
   BookOpen,
-  Users
+  Users,
+  Activity,
+  Eye,
+  EyeOff,
+  Cpu
 } from 'lucide-react';
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import { defaultClassifier, type ClassificationResult } from '../ml/islClassifier';
@@ -57,6 +61,10 @@ export const GesturePredictorView: React.FC = () => {
   const [threshold, setThreshold] = useState<number>(0.65);
   const [historySaved, setHistorySaved] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
+  const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [showLandmarkOverlay, setShowLandmarkOverlay] = useState<boolean>(true);
+  const [inferenceLatencyMs, setInferenceLatencyMs] = useState<number>(0);
+  const [rawHandednessTag, setRawHandednessTag] = useState<string>('None');
 
   // References for animation frame, stream, and temporal tracking
   const animFrameIdRef = useRef<number | null>(null);
@@ -164,6 +172,8 @@ export const GesturePredictorView: React.FC = () => {
       width: number,
       height: number
     ) => {
+      if (!showLandmarkOverlay) return;
+
       ctx.save();
       if (facingMode === 'user') {
         ctx.translate(width, 0);
@@ -229,7 +239,7 @@ export const GesturePredictorView: React.FC = () => {
 
       ctx.restore();
     },
-    [facingMode]
+    [facingMode, showLandmarkOverlay]
   );
 
   // Compute kinematic motion delta from recent wrist history
@@ -319,13 +329,16 @@ export const GesturePredictorView: React.FC = () => {
                 let secondary: LandmarkPoint[] | null = null;
 
                 const handednesses = results.handednesses || [];
+                let hTag = 'None';
 
                 if (numDetected === 1) {
                   primary = results.landmarks[0] as LandmarkPoint[];
+                  const h0 = handednesses[0]?.[0]?.categoryName || 'Hand 1';
+                  hTag = `1 Hand (${h0})`;
                 } else if (numDetected >= 2) {
-                  // Two hands detected: assign Right as primary, Left as secondary
                   const h0 = handednesses[0]?.[0]?.categoryName || 'Right';
-                  // In user mirrored mode, invert label
+                  const h1 = handednesses[1]?.[0]?.categoryName || 'Left';
+                  hTag = `2 Hands (${h0}, ${h1})`;
                   const isUser = facingMode === 'user';
                   const phys0 = isUser ? (h0 === 'Left' ? 'Right' : 'Left') : h0;
 
@@ -337,6 +350,7 @@ export const GesturePredictorView: React.FC = () => {
                     secondary = results.landmarks[0] as LandmarkPoint[];
                   }
                 }
+                setRawHandednessTag(hTag);
 
                 // Render dual hand skeletons
                 drawDualHands(ctx, primary, secondary, canvas.width, canvas.height);
@@ -344,10 +358,14 @@ export const GesturePredictorView: React.FC = () => {
                 // Compute temporal motion
                 const motion = primary ? computeKinematics(primary[0], now) : undefined;
 
-                // Execute multi-hand neural inference
+                // Execute multi-hand neural inference with latency timing
+                const tStart = performance.now();
                 const res = defaultClassifier.classifyMultiHand(primary, secondary, motion);
+                const tEnd = performance.now();
+                setInferenceLatencyMs(Math.round((tEnd - tStart) * 10) / 10);
                 setPrediction(res);
               } else {
+                setRawHandednessTag('No hands in view');
                 // When hands leave frame, clear prediction after 1.2s timeout to prevent stale locks
                 if (now - lastHandSeenTimeRef.current > 1200) {
                   setPrediction(null);
@@ -613,14 +631,42 @@ export const GesturePredictorView: React.FC = () => {
               )}
 
               {cameraStatus === 'running' && (
-                <button
-                  onClick={toggleCameraFacing}
-                  className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-medium flex items-center gap-1.5 transition-colors"
-                  title="Switch front/rear camera"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Flip Camera</span>
-                </button>
+                <>
+                  <button
+                    onClick={toggleCameraFacing}
+                    className="px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm font-medium flex items-center gap-1.5 transition-colors"
+                    title="Switch front/rear camera"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Flip Camera</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowLandmarkOverlay((prev) => !prev)}
+                    className={`px-3 py-2 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                      showLandmarkOverlay
+                        ? 'bg-slate-100 text-slate-800 border-slate-300'
+                        : 'bg-white text-slate-400 border-slate-200'
+                    }`}
+                    title="Toggle hand skeletal landmarks overlay"
+                  >
+                    {showLandmarkOverlay ? <Eye className="w-3.5 h-3.5 text-brand-600" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    <span className="hidden sm:inline">Skeleton</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowDiagnostics((prev) => !prev)}
+                    className={`px-3 py-2 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                      showDiagnostics
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                    }`}
+                    title="Toggle live engineering diagnostics and model telemetry"
+                  >
+                    <Activity className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Diagnostics</span>
+                  </button>
+                </>
               )}
             </div>
 
@@ -760,6 +806,103 @@ export const GesturePredictorView: React.FC = () => {
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">
                   Start the camera and show a single-hand sign (e.g. Hello, Yes, Numbers 1–5) or a two-hand sign (e.g. Namaste, Help, Doctor).
                 </p>
+              </div>
+            )}
+
+            {/* Live Engineering Diagnostics HUD */}
+            {showDiagnostics && (
+              <div className="bg-slate-900 text-slate-100 p-4 rounded-xl border border-slate-800 space-y-3 font-mono text-xs shadow-md">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <span className="flex items-center gap-1.5 font-bold text-slate-300">
+                    <Cpu className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Live Engineering Diagnostics</span>
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-brand-300 border border-slate-700">
+                    {inferenceLatencyMs} ms latency
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Tracked Hands:</span>
+                    <span className="font-semibold text-slate-200">{rawHandednessTag}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Decision Margin:</span>
+                    <span className="font-semibold text-slate-200">
+                      {((prediction?.margin || 0) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Raw Frame Winner:</span>
+                    <span className="font-semibold text-amber-300">
+                      {prediction?.rawPredictedClass || 'None'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">Consensus Winner:</span>
+                    <span className="font-semibold text-emerald-300">
+                      {prediction?.label || 'None'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Rejection / Confirmation Reason */}
+                <div className="p-2 rounded-lg bg-slate-800/80 border border-slate-700/60 text-[11px]">
+                  <span className="text-slate-400 block text-[10px]">Status & Policy Reason:</span>
+                  <span className={prediction?.isRecognized ? 'text-emerald-400' : 'text-amber-400'}>
+                    {prediction?.rejectionReason || 'Waiting for hand detection'}
+                  </span>
+                </div>
+
+                {/* 5-frame Temporal Buffer Chips */}
+                {prediction?.consensusBuffer && (
+                  <div>
+                    <span className="text-slate-400 block text-[10px] mb-1">
+                      Temporal Ring Buffer (5 frames):
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {prediction.consensusBuffer.map((c, idx) => (
+                        <span
+                          key={idx}
+                          className={`px-1.5 py-0.5 rounded text-[10px] ${
+                            c === 'UNKNOWN'
+                              ? 'bg-slate-800 text-slate-400'
+                              : 'bg-brand-950 text-brand-300 border border-brand-800'
+                          }`}
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Top 3 Probabilities Distribution */}
+                {prediction?.rawProbabilities && (
+                  <div className="space-y-1.5 pt-1 border-t border-slate-800">
+                    <span className="text-slate-400 block text-[10px]">
+                      Top-3 Class Softmax Distribution:
+                    </span>
+                    {Object.entries(prediction.rawProbabilities)
+                      .sort(([, a], [, b]) => b - a)
+                      .slice(0, 3)
+                      .map(([cls, prob]) => (
+                        <div key={cls} className="space-y-0.5">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-slate-300">{cls}</span>
+                            <span className="text-slate-400">{(prob * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-brand-500 rounded-full"
+                              style={{ width: `${prob * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             )}
 

@@ -1,7 +1,8 @@
 """
-SPARSHA - Advanced Multi-Hand & Temporal ISL Landmark Dataset Generator
+SPARSHA - Advanced Multi-Hand, Canonical Intrinsic & Temporal ISL Landmark Dataset Generator
 Generates realistic, standardized 3D coordinate samples for validated Indian Sign Language (ISL)
-signs supporting single-hand gestures, two-hand coordinated gestures, and kinematic motion sequences.
+signs supporting single-hand gestures (both right and left hands), two-hand coordinated gestures,
+tilt variations, and kinematic motion sequences.
 """
 
 import json
@@ -38,72 +39,88 @@ CLASSES = [
     "UNKNOWN"        # Out-of-distribution / unstructured poses / relaxed random hands
 ]
 
-def base_hand_template(is_left=False):
-    """Returns canonical open hand landmarks (21 points) in normalized coords [0, 1]."""
-    # Wrist
-    center_x = 0.65 if not is_left else 0.35
-    lm = [[center_x, 0.80, 0.0]]
-    sign = -1.0 if not is_left else 1.0
+def base_hand_template(is_left=False, center=(0.5, 0.75)):
+    """Returns open hand landmarks (21 points) in normalized coords [0, 1]."""
+    cx, cy = center
+    sign = 1.0 if not is_left else -1.0 # ulnar direction (pinky side)
 
-    # Thumb: CMC, MCP, IP, Tip
+    # 0: Wrist
+    lm = [[cx, cy, 0.0]]
+
+    # Thumb: 1 (CMC), 2 (MCP), 3 (IP), 4 (Tip)
     lm.extend([
-        [center_x + sign * 0.06, 0.72, -0.02],
-        [center_x + sign * 0.11, 0.64, -0.04],
-        [center_x + sign * 0.14, 0.55, -0.05],
-        [center_x + sign * 0.17, 0.48, -0.06]
+        [cx - sign * 0.05, cy - 0.06, -0.01],
+        [cx - sign * 0.09, cy - 0.12, -0.02],
+        [cx - sign * 0.12, cy - 0.18, -0.03],
+        [cx - sign * 0.14, cy - 0.23, -0.04]
     ])
-    # Index: MCP, PIP, DIP, Tip
+    # Index: 5 (MCP), 6 (PIP), 7 (DIP), 8 (Tip)
     lm.extend([
-        [center_x + sign * 0.04, 0.54, -0.01],
-        [center_x + sign * 0.04, 0.42, -0.02],
-        [center_x + sign * 0.04, 0.32, -0.02],
-        [center_x + sign * 0.04, 0.22, -0.02]
+        [cx - sign * 0.03, cy - 0.20, -0.01],
+        [cx - sign * 0.035, cy - 0.28, -0.01],
+        [cx - sign * 0.038, cy - 0.35, -0.01],
+        [cx - sign * 0.04, cy - 0.42, -0.01]
     ])
-    # Middle: MCP, PIP, DIP, Tip
+    # Middle: 9 (MCP), 10 (PIP), 11 (DIP), 12 (Tip)
     lm.extend([
-        [center_x, 0.52, 0.0],
-        [center_x, 0.39, 0.0],
-        [center_x, 0.28, 0.0],
-        [center_x, 0.18, 0.0]
+        [cx, cy - 0.21, 0.0],
+        [cx, cy - 0.30, 0.0],
+        [cx, cy - 0.38, 0.0],
+        [cx, cy - 0.45, 0.0]
     ])
-    # Ring: MCP, PIP, DIP, Tip
+    # Ring: 13 (MCP), 14 (PIP), 15 (DIP), 16 (Tip)
     lm.extend([
-        [center_x - sign * 0.04, 0.54, 0.01],
-        [center_x - sign * 0.04, 0.42, 0.01],
-        [center_x - sign * 0.04, 0.32, 0.01],
-        [center_x - sign * 0.04, 0.24, 0.01]
+        [cx + sign * 0.03, cy - 0.20, 0.01],
+        [cx + sign * 0.035, cy - 0.28, 0.01],
+        [cx + sign * 0.038, cy - 0.35, 0.01],
+        [cx + sign * 0.04, cy - 0.42, 0.01]
     ])
-    # Pinky: MCP, PIP, DIP, Tip
+    # Pinky: 17 (MCP), 18 (PIP), 19 (DIP), 20 (Tip)
     lm.extend([
-        [center_x - sign * 0.08, 0.58, 0.02],
-        [center_x - sign * 0.09, 0.48, 0.02],
-        [center_x - sign * 0.10, 0.40, 0.02],
-        [center_x - sign * 0.10, 0.32, 0.02]
+        [cx + sign * 0.06, cy - 0.17, 0.02],
+        [cx + sign * 0.07, cy - 0.24, 0.02],
+        [cx + sign * 0.08, cy - 0.30, 0.02],
+        [cx + sign * 0.09, cy - 0.36, 0.02]
     ])
     return np.array(lm, dtype=np.float32)
 
 def curl_finger(landmarks, finger_indices, curl_factor=0.85):
     """Curls a finger towards the palm (MCP base)."""
     mcp_idx = finger_indices[0]
-    base = landmarks[mcp_idx]
+    base = landmarks[mcp_idx].copy()
     for idx in finger_indices[1:]:
         vec = landmarks[idx] - base
-        landmarks[idx] = base + vec * (1.0 - curl_factor) + np.array([0.0, 0.08 * curl_factor, 0.05 * curl_factor])
+        landmarks[idx] = base + vec * (1.0 - curl_factor) + np.array([0.0, 0.06 * curl_factor, 0.04 * curl_factor])
     return landmarks
 
-def generate_sample(cls_name, signer_id):
+def rotate_landmarks(landmarks, angle_rad, center_idx=0):
+    """Rotates landmarks around a center index by angle_rad."""
+    cx, cy = landmarks[center_idx, 0], landmarks[center_idx, 1]
+    cos_a = math.cos(angle_rad)
+    sin_a = math.sin(angle_rad)
+    rot = landmarks.copy()
+    for i in range(len(rot)):
+        dx = rot[i, 0] - cx
+        dy = rot[i, 1] - cy
+        rot[i, 0] = cx + dx * cos_a - dy * sin_a
+        rot[i, 1] = cy + dx * sin_a + dy * cos_a
+    return rot
+
+def generate_sample(cls_name, signer_id, force_left=None):
     """
-    Generates a realistic sample containing:
-    - primary_landmarks: 21 points for dominant/right hand
-    - secondary_landmarks: 21 points for left hand (or None/zeros if 1-handed)
-    - has_secondary: bool
-    - temporal_motion: dict of kinematic velocity features
+    Generates a realistic multi-hand sample:
+    - Supports right-handed and left-handed execution
+    - Includes tilt and position variation
+    - Includes kinematic motion vectors
     """
-    primary = base_hand_template(is_left=False)
+    is_left = random.choice([True, False]) if force_left is None else force_left
+    cx = random.uniform(0.35, 0.65)
+    cy = random.uniform(0.60, 0.80)
+
+    primary = base_hand_template(is_left=is_left, center=(cx, cy))
     secondary = None
     has_secondary = False
 
-    # Motion features: dx, dy, tip_speed, osc_x, osc_y
     motion = {
         "dx": 0.0,
         "dy": 0.0,
@@ -112,18 +129,20 @@ def generate_sample(cls_name, signer_id):
         "osc_y": 0.0
     }
 
-    # Individual signer proportion noise
-    scale = random.uniform(0.92, 1.08)
-    primary[:, :2] *= scale
+    # Proportional scaling
+    scale = random.uniform(0.90, 1.10)
+    primary[:, :2] = (primary[:, :2] - primary[0, :2]) * scale + primary[0, :2]
+
+    # In-plane tilt angle (-25 to +25 degrees)
+    tilt = random.uniform(-0.40, 0.40)
+
+    sign = 1.0 if not is_left else -1.0
 
     if cls_name == "HELLO":
-        # Open hand with lateral wave oscillation
         motion["osc_x"] = random.uniform(0.35, 0.65)
         motion["tip_speed"] = random.uniform(0.40, 0.70)
-        primary[:, 0] += random.uniform(-0.03, 0.03)
 
     elif cls_name == "YES":
-        # Closed fist with vertical nodding motion
         for f in [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
             curl_finger(primary, f, 0.85)
         motion["osc_y"] = random.uniform(0.35, 0.65)
@@ -131,36 +150,36 @@ def generate_sample(cls_name, signer_id):
         motion["tip_speed"] = random.uniform(0.25, 0.50)
 
     elif cls_name == "NO":
-        # Index and middle pinching / lateral shake
         curl_finger(primary, [1, 2, 3, 4], 0.70)
         curl_finger(primary, [13, 14, 15, 16], 0.85)
         curl_finger(primary, [17, 18, 19, 20], 0.85)
-        primary[8, 0] = primary[0, 0] + 0.01
-        primary[12, 0] = primary[0, 0] + 0.02
+        primary[8, 0] = primary[0, 0] - sign * 0.01
+        primary[12, 0] = primary[0, 0]
         motion["osc_x"] = random.uniform(0.30, 0.60)
 
     elif cls_name == "GOOD":
-        # Thumbs up
+        # Thumbs up: four fingers curled, thumb pointing upward along wrist axis
         for f in [[5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
             curl_finger(primary, f, 0.85)
-        primary[4] = primary[2] + np.array([0.0, -0.22, 0.0])
+        primary[4] = primary[2] + np.array([-sign * 0.01, -0.16, 0.0])
 
     elif cls_name == "BAD":
-        # Thumbs down
+        # Thumbs down: four fingers curled, thumb pointing downward
         for f in [[5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
             curl_finger(primary, f, 0.85)
-        primary[4] = primary[2] + np.array([0.0, 0.22, 0.0])
+        # Flip hand upside-down
+        primary = rotate_landmarks(primary, math.pi, center_idx=0)
+        tilt = random.uniform(-0.25, 0.25) # Reapply small tilt
 
     elif cls_name == "PEACE":
-        # V-sign
         curl_finger(primary, [1, 2, 3, 4], 0.75)
         curl_finger(primary, [13, 14, 15, 16], 0.85)
         curl_finger(primary, [17, 18, 19, 20], 0.85)
-        primary[8, 0] -= 0.04
-        primary[12, 0] += 0.04
+        primary[8, 0] -= sign * 0.035
+        primary[12, 0] += sign * 0.035
 
     elif cls_name == "SUPER":
-        # A-OK: thumb tip meets index tip
+        # Thumb meets index in a circle, middle/ring/pinky extended
         curl_finger(primary, [1, 2, 3, 4], 0.40)
         curl_finger(primary, [5, 6, 7, 8], 0.50)
         pinch_pt = (primary[4] + primary[8]) / 2.0
@@ -168,7 +187,6 @@ def generate_sample(cls_name, signer_id):
         primary[8] = pinch_pt
 
     elif cls_name == "I_LOVE_YOU":
-        # Thumb, Index, Pinky extended
         curl_finger(primary, [9, 10, 11, 12], 0.85)
         curl_finger(primary, [13, 14, 15, 16], 0.85)
 
@@ -191,11 +209,10 @@ def generate_sample(cls_name, signer_id):
         curl_finger(primary, [1, 2, 3, 4], 0.80)
 
     elif cls_name == "NUMBER_5":
-        primary[4, 0] += 0.05
-        primary[20, 0] -= 0.05
+        primary[4, 0] -= sign * 0.04
+        primary[20, 0] += sign * 0.04
 
     elif cls_name == "WATER":
-        # Cupped hand tilting back
         for f in [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
             curl_finger(primary, f, 0.45)
         motion["dy"] = random.uniform(-0.35, -0.15)
@@ -204,85 +221,72 @@ def generate_sample(cls_name, signer_id):
     # --- TWO-HAND GESTURES ---
     elif cls_name == "NAMASTE":
         has_secondary = True
-        secondary = base_hand_template(is_left=True)
-        # Shift both hands to center chest, pressed together
-        primary[:, 0] = 0.52 + (primary[:, 0] - 0.65) * 0.3
-        secondary[:, 0] = 0.48 + (secondary[:, 0] - 0.35) * 0.3
-        # Align fingertips vertically
-        primary[5:21, 1] = np.linspace(0.40, 0.15, 16)
-        secondary[5:21, 1] = np.linspace(0.40, 0.15, 16)
-        # Symmetrical height
-        primary[:, 1] += 0.05
-        secondary[:, 1] += 0.05
+        # Dominant right hand + secondary left hand
+        primary = base_hand_template(is_left=False, center=(0.53, 0.65))
+        secondary = base_hand_template(is_left=True, center=(0.47, 0.65))
+        tilt = random.uniform(-0.08, 0.08)
 
     elif cls_name == "HELP":
         has_secondary = True
-        secondary = base_hand_template(is_left=True)
-        # Non-dominant hand flat horizontally at bottom
-        secondary[:, 1] = 0.70 + (secondary[:, 1] - 0.80) * 0.2
-        secondary[:, 0] = 0.50 + (secondary[:, 0] - 0.35)
-        # Dominant hand is a thumbs-up fist resting on the center of secondary palm
+        secondary = base_hand_template(is_left=True, center=(0.50, 0.72))
+        # Secondary flat palm horizontal
+        secondary = rotate_landmarks(secondary, -math.pi / 2, center_idx=0)
+        # Dominant thumbs up resting on secondary palm
+        primary = base_hand_template(is_left=False, center=(0.50, 0.60))
         for f in [[5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
             curl_finger(primary, f, 0.85)
-        primary[:, 0] = 0.50 + (primary[:, 0] - 0.65)
-        primary[:, 1] = 0.62 + (primary[:, 1] - 0.80)
-        primary[4] = primary[2] + np.array([0.0, -0.22, 0.0]) # Thumb upright
-        # Upward motion of both hands together
+        primary[4] = primary[2] + np.array([-0.01, -0.16, 0.0])
         motion["dy"] = random.uniform(-0.40, -0.20)
         motion["tip_speed"] = random.uniform(0.30, 0.50)
+        tilt = random.uniform(-0.08, 0.08)
 
     elif cls_name == "DOCTOR":
         has_secondary = True
-        secondary = base_hand_template(is_left=True)
-        # Secondary wrist horizontal
-        secondary[:, 0] = 0.45 + (secondary[:, 0] - 0.35)
-        secondary[:, 1] = 0.65
-        # Primary dominant index & middle fingertips tap secondary wrist (landmark 0)
+        secondary = base_hand_template(is_left=True, center=(0.45, 0.68))
+        secondary = rotate_landmarks(secondary, -math.pi / 2.2, center_idx=0)
+        # Dominant index/middle tapping secondary wrist
+        primary = base_hand_template(is_left=False, center=(0.46, 0.58))
         curl_finger(primary, [1, 2, 3, 4], 0.75)
         curl_finger(primary, [13, 14, 15, 16], 0.85)
         curl_finger(primary, [17, 18, 19, 20], 0.85)
-        # Align primary index/middle tip with secondary wrist
-        wrist_target = secondary[0]
-        offset = wrist_target - primary[8]
-        primary[:, :] += offset + np.array([0.01, -0.05, 0.0])
-        motion["osc_y"] = random.uniform(0.30, 0.60) # Tapping motion
+        motion["osc_y"] = random.uniform(0.30, 0.60)
         motion["tip_speed"] = random.uniform(0.25, 0.50)
+        tilt = random.uniform(-0.08, 0.08)
 
     elif cls_name == "THANK_YOU":
-        # Can be 1 or 2 handed; flat hand moving outward from chin
         has_secondary = random.choice([True, False])
         if has_secondary:
-            secondary = base_hand_template(is_left=True)
-            secondary[:, 1] -= 0.12
-            secondary[:, 0] -= 0.05
-        primary[:, 1] -= 0.15 # Near chin
-        motion["dy"] = random.uniform(0.30, 0.60) # Moving outward forward
+            secondary = base_hand_template(is_left=True, center=(0.42, 0.60))
+        motion["dy"] = random.uniform(0.30, 0.60)
         motion["tip_speed"] = random.uniform(0.35, 0.65)
 
     elif cls_name == "PLEASE":
         has_secondary = random.choice([True, False])
         if has_secondary:
-            secondary = base_hand_template(is_left=True)
-            secondary[:, 1] += 0.05
-        # Circular motion on chest
+            secondary = base_hand_template(is_left=True, center=(0.42, 0.70))
         motion["osc_x"] = random.uniform(0.30, 0.60)
         motion["osc_y"] = random.uniform(0.30, 0.60)
         motion["tip_speed"] = random.uniform(0.30, 0.55)
 
     elif cls_name == "UNKNOWN":
-        # Random unstructured finger poses
         has_secondary = random.choice([True, False])
         for f in [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
             curl_finger(primary, f, random.uniform(0.1, 0.9))
         if has_secondary:
-            secondary = base_hand_template(is_left=True)
+            secondary = base_hand_template(is_left=True, center=(0.42, 0.70))
             for f in [[1,2,3,4], [5,6,7,8], [9,10,11,12], [13,14,15,16], [17,18,19,20]]:
                 curl_finger(secondary, f, random.uniform(0.1, 0.9))
 
-    # Add realistic sensor & environmental noise
-    primary += np.random.normal(0, 0.010, primary.shape)
+    # Apply tilt rotation
+    if abs(tilt) > 1e-4:
+        primary = rotate_landmarks(primary, tilt, center_idx=0)
+        if has_secondary and secondary is not None:
+            secondary = rotate_landmarks(secondary, tilt * 0.5, center_idx=0)
+
+    # Realistic noise
+    primary += np.random.normal(0, 0.008, primary.shape)
     if has_secondary and secondary is not None:
-        secondary += np.random.normal(0, 0.010, secondary.shape)
+        secondary += np.random.normal(0, 0.008, secondary.shape)
 
     return {
         "label": cls_name,
@@ -290,21 +294,22 @@ def generate_sample(cls_name, signer_id):
         "primary_landmarks": primary.tolist(),
         "secondary_landmarks": secondary.tolist() if (has_secondary and secondary is not None) else None,
         "has_secondary": has_secondary,
+        "is_left": is_left,
         "motion": motion
     }
 
-def generate_dataset(samples_per_class=150, output_file="ml/isl_landmarks_dataset.json"):
+def generate_dataset(samples_per_class=175, output_file="ml/isl_landmarks_dataset.json"):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     dataset = []
     signers = [f"signer_{i+1}" for i in range(6)]
 
     for cls in CLASSES:
-        for _ in range(samples_per_class):
-            signer = random.choice(signers)
+        for i in range(samples_per_class):
+            signer = signers[i % len(signers)]
             sample = generate_sample(cls, signer)
             dataset.append(sample)
 
-    print(f"Generated {len(dataset)} multi-hand samples across {len(CLASSES)} classes.")
+    print(f"Generated {len(dataset)} canonical multi-hand samples across {len(CLASSES)} classes.")
     with open(output_file, "w") as f:
         json.dump(dataset, f, indent=2)
     print(f"Dataset successfully saved to {output_file}")

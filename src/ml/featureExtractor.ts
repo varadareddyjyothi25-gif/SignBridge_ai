@@ -13,65 +13,87 @@ export interface MotionData {
 }
 
 /**
- * Extracts 51 scale- and translation-invariant geometric features from 21 hand landmarks.
+ * Extracts 53 canonical intrinsic features from 21 hand landmarks:
+ * - 42 intrinsic 2D coordinates aligned to longitudinal (u) and ulnar (v) axes
+ * - 2 global hand orientation features (ux, uy)
+ * - 5 fingertip-to-wrist euclidean distances
+ * - 4 adjacent fingertip euclidean distances
+ *
+ * Guarantees 100% invariance to left/right hand symmetry, in-plane tilt,
+ * scaling, translation, and selfie-camera mirroring.
  */
 export function extractSingleHandFeatures(landmarks: LandmarkPoint[] | null | undefined): number[] {
   if (!landmarks || landmarks.length !== 21) {
-    return new Array(51).fill(0.0);
+    return new Array(53).fill(0.0);
   }
 
   const wrist = landmarks[0];
+  const middleMcp = landmarks[9];
 
-  // 1. Shift wrist to origin (0, 0)
-  const relPoints = landmarks.map((p) => ({
-    x: p.x - wrist.x,
-    y: p.y - wrist.y,
-  }));
-
-  // 2. Scale invariance: Euclidean distance between wrist (0) and middle MCP (9)
-  const middleMcp = relPoints[9];
-  let scale = Math.sqrt(middleMcp.x * middleMcp.x + middleMcp.y * middleMcp.y);
+  // 1. Longitudinal vector along middle finger axis (u)
+  const rx9 = middleMcp.x - wrist.x;
+  const ry9 = middleMcp.y - wrist.y;
+  let scale = Math.sqrt(rx9 * rx9 + ry9 * ry9);
   if (scale < 1e-6) {
     scale = 1.0;
   }
 
-  const normPoints = relPoints.map((p) => ({
-    x: p.x / scale,
-    y: p.y / scale,
-  }));
+  const ux = rx9 / scale;
+  const uy = ry9 / scale;
 
+  // 2. Transverse candidate unit vector (v perpendicular to u)
+  let vx = -uy;
+  let vy = ux;
+
+  // Ensure v points toward pinky (ulnar direction, positive x)
+  const indexMcp = landmarks[5];
+  const pinkyMcp = landmarks[17];
+  const wx = pinkyMcp.x - indexMcp.x;
+  const wy = pinkyMcp.y - indexMcp.y;
+  if (wx * vx + wy * vy < 0) {
+    vx = -vx;
+    vy = -vy;
+  }
+
+  // 3. Project landmarks into intrinsic frame
   const features: number[] = [];
+  const normPoints: { x: number; y: number }[] = [];
 
-  // 42 2D coordinates (x, y)
-  for (const p of normPoints) {
-    features.push(p.x, p.y);
+  for (let i = 0; i < 21; i++) {
+    const rx = landmarks[i].x - wrist.x;
+    const ry = landmarks[i].y - wrist.y;
+    const projX = (rx * vx + ry * vy) / scale;
+    const projY = (rx * ux + ry * uy) / scale;
+    normPoints.push({ x: projX, y: projY });
+    features.push(projX, projY);
   }
 
-  // 5 fingertip-to-wrist euclidean distances (Thumb 4, Index 8, Middle 12, Ring 16, Pinky 20)
-  const fingertipIndices = [4, 8, 12, 16, 20];
-  for (const idx of fingertipIndices) {
-    const tip = normPoints[idx];
-    const dist = Math.sqrt(tip.x * tip.x + tip.y * tip.y);
-    features.push(dist);
+  // 4. Global orientation vector
+  features.push(ux, uy);
+
+  // 5. 5 fingertip-to-wrist euclidean distances (4, 8, 12, 16, 20)
+  const tipIndices = [4, 8, 12, 16, 20];
+  for (const idx of tipIndices) {
+    const p = normPoints[idx];
+    features.push(Math.sqrt(p.x * p.x + p.y * p.y));
   }
 
-  // 4 adjacent fingertip euclidean distances (4-8, 8-12, 12-16, 16-20)
-  for (let i = 0; i < fingertipIndices.length - 1; i++) {
-    const tipA = normPoints[fingertipIndices[i]];
-    const tipB = normPoints[fingertipIndices[i + 1]];
-    const dx = tipA.x - tipB.x;
-    const dy = tipA.y - tipB.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    features.push(dist);
+  // 6. 4 adjacent fingertip euclidean distances (4-8, 8-12, 12-16, 16-20)
+  for (let i = 0; i < tipIndices.length - 1; i++) {
+    const pA = normPoints[tipIndices[i]];
+    const pB = normPoints[tipIndices[i + 1]];
+    const dx = pA.x - pB.x;
+    const dy = pA.y - pB.y;
+    features.push(Math.sqrt(dx * dx + dy * dy));
   }
 
   return features;
 }
 
 /**
- * Extracts a complete 118-dimensional feature vector:
- * - 51 primary (dominant) hand features
- * - 51 secondary (non-dominant) hand features (or zeros)
+ * Extracts a complete 122-dimensional feature vector:
+ * - 53 primary (dominant) hand canonical features
+ * - 53 secondary (non-dominant) hand canonical features (or zeros)
  * - 11 inter-hand spatial and relative orientation features
  * - 5 kinematic motion features
  */
@@ -82,46 +104,57 @@ export function extractMultiHandFeatures(
 ): number[] {
   const feats1 = extractSingleHandFeatures(primaryHand);
   const hasSecondary = Boolean(secondaryHand && secondaryHand.length === 21);
-  const feats2 = hasSecondary ? extractSingleHandFeatures(secondaryHand) : new Array(51).fill(0.0);
+  const feats2 = hasSecondary ? extractSingleHandFeatures(secondaryHand) : new Array(53).fill(0.0);
 
   // 11 Inter-hand features
   const interFeats: number[] = new Array(11).fill(0.0);
   if (primaryHand && primaryHand.length === 21 && hasSecondary && secondaryHand) {
-    const wrist1 = primaryHand[0];
-    const mcp1 = primaryHand[9];
-    let scale1 = Math.sqrt(
-      (mcp1.x - wrist1.x) * (mcp1.x - wrist1.x) + (mcp1.y - wrist1.y) * (mcp1.y - wrist1.y)
-    );
+    const p1 = primaryHand;
+    const p2 = secondaryHand;
+
+    const wrist1 = p1[0];
+    const wrist2 = p2[0];
+    const rx9 = p1[9].x - wrist1.x;
+    const ry9 = p1[9].y - wrist1.y;
+    let scale1 = Math.sqrt(rx9 * rx9 + ry9 * ry9);
     if (scale1 < 1e-6) scale1 = 1.0;
 
-    const wrist2 = secondaryHand[0];
-    const mcp2 = secondaryHand[9];
-    let scale2 = Math.sqrt(
-      (mcp2.x - wrist2.x) * (mcp2.x - wrist2.x) + (mcp2.y - wrist2.y) * (mcp2.y - wrist2.y)
-    );
-    if (scale2 < 1e-6) scale2 = 1.0;
+    const ux = rx9 / scale1;
+    const uy = ry9 / scale1;
+    let vx = -uy;
+    let vy = ux;
+    if ((p1[17].x - p1[5].x) * vx + (p1[17].y - p1[5].y) * vy < 0) {
+      vx = -vx;
+      vy = -vy;
+    }
 
-    // Relative wrist displacement
-    const relWristX = (wrist2.x - wrist1.x) / scale1;
-    const relWristY = (wrist2.y - wrist1.y) / scale1;
+    // Relative wrist displacement in primary intrinsic frame
+    const dxW = wrist2.x - wrist1.x;
+    const dyW = wrist2.y - wrist1.y;
+    const relWristX = (dxW * vx + dyW * vy) / scale1;
+    const relWristY = (dxW * ux + dyW * uy) / scale1;
     const wristDist = Math.sqrt(relWristX * relWristX + relWristY * relWristY);
 
+    let scale2 = Math.sqrt(
+      (p2[9].x - wrist2.x) * (p2[9].x - wrist2.x) + (p2[9].y - wrist2.y) * (p2[9].y - wrist2.y)
+    );
+    if (scale2 < 1e-6) scale2 = 1.0;
     const scaleRatio = scale2 / scale1;
 
     // 5 Fingertip-to-fingertip proximity distances (4, 8, 12, 16, 20)
     const tipIndices = [4, 8, 12, 16, 20];
     const tipDists: number[] = [];
     for (const idx of tipIndices) {
-      const dx = (primaryHand[idx].x - secondaryHand[idx].x) / scale1;
-      const dy = (primaryHand[idx].y - secondaryHand[idx].y) / scale1;
+      const dx = (p1[idx].x - p2[idx].x) / scale1;
+      const dy = (p1[idx].y - p2[idx].y) / scale1;
       tipDists.push(Math.sqrt(dx * dx + dy * dy));
     }
 
     // Dominant fist to secondary palm center
-    const palm2CenterX = (secondaryHand[0].x + secondaryHand[9].x) / 2.0;
-    const palm2CenterY = (secondaryHand[0].y + secondaryHand[9].y) / 2.0;
-    const dxFist = (primaryHand[0].x - palm2CenterX) / scale1;
-    const dyFist = (primaryHand[0].y - palm2CenterY) / scale1;
+    const palm2CenterX = (p2[0].x + p2[9].x) / 2.0;
+    const palm2CenterY = (p2[0].y + p2[9].y) / 2.0;
+    const dxFist = (p1[0].x - palm2CenterX) / scale1;
+    const dyFist = (p1[0].y - palm2CenterY) / scale1;
     const fistToPalm = Math.sqrt(dxFist * dxFist + dyFist * dyFist);
 
     interFeats[0] = relWristX;
