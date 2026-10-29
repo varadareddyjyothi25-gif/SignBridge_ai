@@ -50,13 +50,13 @@ type RenderItem =
     };
 
 // Kinematic joint angles for 5 fingers
-interface FingerAngles {
+export interface FingerAngles {
   // [mcp, pip, dip] flexion (0 = fully extended, 1 = tightly curled)
   bend: [number, number, number];
   spread: number; // lateral spread from finger centerline (radians)
 }
 
-interface HandKinematicPose {
+export interface HandKinematicPose {
   wristPos: Point3D;
   wristRot: [number, number, number]; // [pitch, yaw, roll] in radians
   thumb: { bend: [number, number, number]; abduction: number };
@@ -209,7 +209,7 @@ function easeInOut(t: number): number {
 }
 
 // Generate anatomically authentic kinematic poses for all 19 ISL signs
-function getSignKinematics(signLabel: string, progress: number): { dominant: HandKinematicPose; secondary?: HandKinematicPose } {
+export function getSignKinematics(signLabel: string, progress: number): { dominant: HandKinematicPose; secondary?: HandKinematicPose } {
   const normT = (progress % 100) / 100;
   const eased = easeInOut(normT);
   const osc = Math.sin(normT * Math.PI * 2);

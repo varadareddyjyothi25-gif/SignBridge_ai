@@ -176,13 +176,13 @@ export const TextToSignView: React.FC = () => {
             <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-2">
               <div className="flex items-center gap-1.5 font-bold">
                 <AlertCircle className="w-4 h-4 text-amber-600" />
-                <span>Unsupported Word or Phrase</span>
+                <span>Sign Not Available Yet — Unsupported Word or Phrase</span>
               </div>
               <p>
                 The phrase <strong>“{inputText}”</strong> is not currently in our validated Indian Sign Language database.
               </p>
               <p className="text-amber-800">
-                To maintain linguistic accuracy, SPARSHA does not generate synthetic or unverified gestures.
+                To maintain linguistic accuracy and avoid misleading gestures, SPARSHA does not generate synthetic or unverified hand signs.
               </p>
             </div>
           )}

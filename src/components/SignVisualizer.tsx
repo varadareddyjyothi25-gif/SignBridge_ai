@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Pause, RotateCcw, ShieldCheck, Info } from 'lucide-react';
 import type { ISLSignEntry } from '../ml/dictionaryData';
-import { RealisticHand3D } from './RealisticHand3D';
+import { RealisticSignViewer } from './RealisticSignViewer';
 
 interface SignVisualizerProps {
   entry: ISLSignEntry;
@@ -235,7 +235,7 @@ export const SignVisualizer: React.FC<SignVisualizerProps> = ({ entry, onComplet
                 : 'text-slate-600 hover:text-slate-900'
             }`}
           >
-            Realistic 3D Hand Rig
+            Realistic 3D Human Hand
           </button>
           <button
             onClick={() => setRenderMode('vector')}
@@ -254,13 +254,13 @@ export const SignVisualizer: React.FC<SignVisualizerProps> = ({ entry, onComplet
       </div>
 
       {/* Visual Canvas Area */}
-      <div className="relative bg-gradient-to-b from-slate-900/5 to-slate-900/10 p-4 sm:p-6 flex flex-col items-center justify-center min-h-[260px]">
+      <div className="relative bg-gradient-to-b from-slate-900/5 to-slate-900/10 p-3 sm:p-5 flex flex-col items-center justify-center min-h-[260px]">
         {renderMode === '3d' ? (
-          <RealisticHand3D
+          <RealisticSignViewer
             signLabel={entry.label}
             progress={progress}
             isTwoHanded={entry.twoHanded}
-            className="w-full max-w-md"
+            className="w-full max-w-xl"
           />
         ) : (
           <div className="w-52 h-52 relative drop-shadow-md">
