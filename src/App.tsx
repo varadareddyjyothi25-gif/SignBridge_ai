@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navigation, type ActiveTab } from './components/Navigation';
 import { WelcomeView } from './components/WelcomeView';
@@ -10,20 +10,73 @@ import { DashboardView } from './components/DashboardView';
 import { AuthModal } from './components/AuthModal';
 import { Shield } from 'lucide-react';
 
+const VALID_TABS: ActiveTab[] = ['welcome', 'home', 'gesture', 'text', 'library', 'dashboard'];
+const PROTECTED_TABS: ActiveTab[] = ['home', 'dashboard'];
+
+const parseHashTab = (): ActiveTab => {
+  if (typeof window === 'undefined') return 'welcome';
+  const hash = window.location.hash.replace(/^#\/?/, '') as ActiveTab;
+  return VALID_TABS.includes(hash) ? hash : 'welcome';
+};
+
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('welcome');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(parseHashTab);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
 
+  // Sync state with browser back/forward history navigation
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      const raw = window.location.hash.replace(/^#\/?/, '') as ActiveTab;
+      const targetTab = (event.state?.tab || raw || 'welcome') as ActiveTab;
+
+      if (!VALID_TABS.includes(targetTab)) {
+        setActiveTab('welcome');
+        return;
+      }
+
+      // Check protection on browser Back/Forward navigation
+      if (PROTECTED_TABS.includes(targetTab) && !user) {
+        window.history.replaceState({ tab: 'welcome' }, '', '#welcome');
+        setActiveTab('welcome');
+        setAuthMode('signin');
+        return;
+      }
+
+      setActiveTab(targetTab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user]);
+
+  // Reactive guard: If user logs out or session terminates while on protected view
+  useEffect(() => {
+    if (!loading && !user && PROTECTED_TABS.includes(activeTab)) {
+      queueMicrotask(() => {
+        setActiveTab('welcome');
+        window.history.replaceState({ tab: 'welcome' }, '', '#welcome');
+      });
+    }
+  }, [user, loading, activeTab]);
+
   // Handle protected navigation
-  const handleNavigate = (tab: ActiveTab) => {
-    if (tab === 'dashboard' && !user) {
+  const handleNavigate = (tab: ActiveTab, replace = false) => {
+    if (PROTECTED_TABS.includes(tab) && !user) {
       setAuthMode('signin');
       setAuthModalOpen(true);
+      setActiveTab('welcome');
+      window.history.replaceState({ tab: 'welcome' }, '', '#welcome');
       return;
     }
+
     setActiveTab(tab);
+    if (replace) {
+      window.history.replaceState({ tab }, '', `#${tab}`);
+    } else {
+      window.history.pushState({ tab }, '', `#${tab}`);
+    }
   };
 
   const handleOpenAuth = (mode: 'signin' | 'signup' = 'signin') => {
@@ -42,13 +95,24 @@ const AppContent: React.FC = () => {
       );
     }
 
+    // Strict security guard: Unauthenticated users MUST NEVER access protected pages
+    if (!user && PROTECTED_TABS.includes(activeTab)) {
+      return (
+        <WelcomeView
+          onGetStarted={() => handleOpenAuth('signup')}
+          onSignIn={() => handleOpenAuth('signin')}
+          onExploreFeatures={() => handleNavigate('library')}
+        />
+      );
+    }
+
     // Default unauthenticated experience
     if (activeTab === 'welcome' && !user) {
       return (
         <WelcomeView
           onGetStarted={() => handleOpenAuth('signup')}
           onSignIn={() => handleOpenAuth('signin')}
-          onExploreFeatures={() => setActiveTab('library')}
+          onExploreFeatures={() => handleNavigate('library')}
         />
       );
     }
@@ -70,12 +134,20 @@ const AppContent: React.FC = () => {
         return (
           <DashboardView
             onNavigateToSign={() => {
-              setActiveTab('text');
+              handleNavigate('text');
             }}
           />
         );
       default:
-        return <HomeView onNavigate={handleNavigate} />;
+        return user ? (
+          <HomeView onNavigate={handleNavigate} />
+        ) : (
+          <WelcomeView
+            onGetStarted={() => handleOpenAuth('signup')}
+            onSignIn={() => handleOpenAuth('signin')}
+            onExploreFeatures={() => handleNavigate('library')}
+          />
+        );
     }
   };
 

@@ -5,6 +5,7 @@ import {
   BookOpen,
   LayoutDashboard,
   LogOut,
+  Loader2,
   Database,
   Menu,
   X
@@ -27,6 +28,27 @@ export const Navigation: React.FC<NavigationProps> = ({
 }) => {
   const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    setLogoutError(null);
+    try {
+      const res = await signOut();
+      if (res && res.error) {
+        setLogoutError(res.error);
+      } else {
+        onNavigate('welcome');
+        setMobileMenuOpen(false);
+      }
+    } catch (err: any) {
+      setLogoutError(err?.message || 'Logout failed. Please try again.');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const navItems = [
     { id: 'gesture' as ActiveTab, label: 'Hand Gesture AI', icon: Camera },
@@ -124,12 +146,21 @@ export const Navigation: React.FC<NavigationProps> = ({
               </button>
 
               <button
-                onClick={signOut}
-                className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                title="Sign out"
-                aria-label="Sign out"
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+                className={`p-2 rounded-lg transition-colors ${
+                  isLoggingOut
+                    ? 'opacity-60 cursor-not-allowed text-slate-400 bg-slate-100'
+                    : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                }`}
+                title={isLoggingOut ? 'Signing out...' : 'Sign out'}
+                aria-label={isLoggingOut ? 'Signing out...' : 'Sign out'}
               >
-                <LogOut className="w-4 h-4" />
+                {isLoggingOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                ) : (
+                  <LogOut className="w-4 h-4" />
+                )}
               </button>
             </div>
           ) : (
@@ -187,14 +218,26 @@ export const Navigation: React.FC<NavigationProps> = ({
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
             {user ? (
               <button
-                onClick={() => {
-                  signOut();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl flex items-center justify-center gap-2"
+                onClick={handleSignOut}
+                disabled={isLoggingOut}
+                className={`w-full py-2.5 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors ${
+                  isLoggingOut
+                    ? 'opacity-60 cursor-not-allowed text-slate-400 bg-slate-100'
+                    : 'text-red-600 hover:bg-red-50'
+                }`}
+                aria-label={isLoggingOut ? 'Signing out...' : 'Sign out'}
               >
-                <LogOut className="w-4 h-4" />
-                <span>Sign Out ({user.email})</span>
+                {isLoggingOut ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                    <span>Signing out...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out ({user.email})</span>
+                  </>
+                )}
               </button>
             ) : (
               <div className="grid grid-cols-2 gap-2 pt-1">
@@ -219,6 +262,26 @@ export const Navigation: React.FC<NavigationProps> = ({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Logout Error Alert Banner */}
+      {logoutError && (
+        <div
+          role="alert"
+          className="bg-red-50 border-t border-b border-red-200 px-4 py-2.5 text-xs text-red-700 flex items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-bold">Logout failed:</span>
+            <span>{logoutError}</span>
+          </div>
+          <button
+            onClick={() => setLogoutError(null)}
+            className="text-red-700 hover:text-red-900 font-semibold text-xs ml-4 underline"
+            aria-label="Dismiss error"
+          >
+            Dismiss
+          </button>
         </div>
       )}
     </header>

@@ -7,7 +7,7 @@ interface AuthContextType {
   isDemoMode: boolean;
   signIn: (email: string, password?: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string; requiresVerification?: boolean }>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<{ error?: string }>;
   resetPassword: (email: string) => Promise<{ error?: string; message?: string }>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error?: string }>;
 }
@@ -65,8 +65,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen to Supabase auth state changes if configured
     let subscription: { unsubscribe: () => void } | null = null;
     if (isSupabaseConfigured) {
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+          localStorage.removeItem(LOCAL_USER_KEY);
+          setUser(null);
+        } else if (session?.user) {
           setUser({
             id: session.user.id,
             email: session.user.email || '',
@@ -195,16 +198,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {};
   };
 
-  const signOut = async (): Promise<void> => {
+  const signOut = async (): Promise<{ error?: string }> => {
     if (isSupabaseConfigured) {
       try {
-        await supabase.auth.signOut();
-      } catch (e) {
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.warn('Supabase signOut error:', error);
+          return { error: error.message };
+        }
+      } catch (e: any) {
         console.warn('Supabase signOut error:', e);
+        return { error: e?.message || 'Logout failed' };
       }
     }
     localStorage.removeItem(LOCAL_USER_KEY);
     setUser(null);
+    return {};
   };
 
   const resetPassword = async (email: string): Promise<{ error?: string; message?: string }> => {
