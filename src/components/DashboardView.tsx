@@ -11,7 +11,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import {
-  SparshaDataService,
+  SignBridgeDataService,
   type RecognitionHistoryItem,
   type SavedSignItem
 } from '../lib/supabase';
@@ -35,9 +35,9 @@ export const DashboardView: React.FC<{ onNavigateToLibrary?: () => void }> = ({
     async function loadUserData() {
       setLoading(true);
       if (user) {
-        const hist = await SparshaDataService.getHistory(user.id);
-        const saved = await SparshaDataService.getSavedSigns(user.id);
-        const count = SparshaDataService.getCompletedLearningCount(user.id);
+        const hist = await SignBridgeDataService.getHistory(user.id);
+        const saved = await SignBridgeDataService.getSavedSigns(user.id);
+        const count = SignBridgeDataService.getCompletedLearningCount(user.id);
         setHistory(hist);
         setSavedSigns(saved);
         setCompletedCount(count);
@@ -50,7 +50,7 @@ export const DashboardView: React.FC<{ onNavigateToLibrary?: () => void }> = ({
 
   const handleClearHistory = async () => {
     if (!user) return;
-    await SparshaDataService.clearHistory(user.id);
+    await SignBridgeDataService.clearHistory(user.id);
     setHistory([]);
     setShowClearConfirm(false);
     setFeedbackMsg('Recognition history has been permanently cleared.');
@@ -84,7 +84,7 @@ export const DashboardView: React.FC<{ onNavigateToLibrary?: () => void }> = ({
             {user?.fullName ? user.fullName.charAt(0).toUpperCase() : <User className="w-7 h-7" />}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">{user?.fullName || 'SPARSHA Member'}</h2>
+            <h2 className="text-xl font-bold text-slate-900">{user?.fullName || 'SignBridge AI Member'}</h2>
             <p className="text-xs text-slate-500 mt-0.5">{user?.email}</p>
             <div className="flex items-center gap-2 mt-2">
               <span className="text-[11px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
@@ -275,15 +275,13 @@ export const DashboardView: React.FC<{ onNavigateToLibrary?: () => void }> = ({
               </div>
               <button
                 onClick={handleToggleHistoryRecording}
-                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${
-                  user?.recordHistory ? 'bg-brand-600' : 'bg-slate-200'
-                }`}
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors ${user?.recordHistory ? 'bg-brand-600' : 'bg-slate-200'
+                  }`}
                 aria-label="Toggle history recording"
               >
                 <div
-                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${
-                    user?.recordHistory ? 'translate-x-5' : 'translate-x-0'
-                  }`}
+                  className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${user?.recordHistory ? 'translate-x-5' : 'translate-x-0'
+                    }`}
                 />
               </button>
             </div>
@@ -296,11 +294,10 @@ export const DashboardView: React.FC<{ onNavigateToLibrary?: () => void }> = ({
                   <button
                     key={hand}
                     onClick={() => handleHandPreferenceChange(hand)}
-                    className={`py-1.5 px-3 rounded-lg border text-center capitalize transition-colors font-medium ${
-                      user?.preferredHand === hand
+                    className={`py-1.5 px-3 rounded-lg border text-center capitalize transition-colors font-medium ${user?.preferredHand === hand
                         ? 'border-brand-600 bg-brand-50 text-brand-700'
                         : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
+                      }`}
                   >
                     {hand} Hand
                   </button>

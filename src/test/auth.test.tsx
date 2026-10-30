@@ -8,7 +8,7 @@ const TestAuthConsumer = () => {
   return (
     <div>
       <span data-testid="user-status">{user ? user.fullName : 'Guest'}</span>
-      <button onClick={() => signIn('tester@sparsha.org', 'securePass123!')}>Sign In Demo</button>
+      <button onClick={() => signIn('tester@signbridge.org', 'securePass123!')}>Sign In Demo</button>
       <button onClick={() => signOut()}>Sign Out</button>
     </div>
   );
@@ -64,7 +64,7 @@ describe('Authentication Flow and State Management', () => {
   it('validates password length and email structure in AuthModal', async () => {
     render(
       <AuthProvider>
-        <AuthModal isOpen={true} initialMode="signup" onClose={() => {}} />
+        <AuthModal isOpen={true} initialMode="signup" onClose={() => { }} />
       </AuthProvider>
     );
 

@@ -18,7 +18,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
       <div className="text-center max-w-3xl mx-auto space-y-5 px-4">
         {/* Brand Emblem */}
         <div className="w-24 h-24 mx-auto rounded-3xl bg-white p-2.5 shadow-md border border-slate-200/80 hover:scale-105 transition-transform flex items-center justify-center">
-          <img src="/logo.png" alt="SPARSHA Logo" className="w-full h-full object-contain" />
+          <img src="/logo.png" alt="SignBridge AI Logo" className="w-full h-full object-contain" />
         </div>
 
         {/* Brand Badge */}
@@ -28,7 +28,7 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
         </div>
 
         <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-          SPARSHA
+          SignBridge AI
           <span className="block text-xl sm:text-2xl font-normal text-slate-600 mt-2">
             “Bridging Communication, One Gesture at a Time.”
           </span>

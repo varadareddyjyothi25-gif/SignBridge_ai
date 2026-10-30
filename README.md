@@ -1,8 +1,8 @@
-# SPARSHA — Transforming Oral Understanding into Clear HandSigns (TOUCH)
+# SignBridge AI — Transforming Oral Understanding into Clear HandSigns (TOUCH)
 
 > **“Bridging Communication, One Gesture at a Time.”**
 
-SPARSHA is an accessible, privacy-centric AI platform connecting spoken/written language with **Indian Sign Language (ISL)**. Designed with scientific integrity, SPARSHA prioritizes verified landmark distributions, on-device privacy, responsive accessibility (WCAG 2.1 AA), and zero-server video retention.
+SignBridge AI is an accessible, privacy-centric AI platform connecting spoken/written language with **Indian Sign Language (ISL)**. Designed with scientific integrity, SignBridge AI prioritizes verified landmark distributions, on-device privacy, responsive accessibility (WCAG 2.1 AA), and zero-server video retention.
 
 ---
 
@@ -10,7 +10,7 @@ SPARSHA is an accessible, privacy-centric AI platform connecting spoken/written 
 
 ```
                                       +---------------------------------------------+
-                                      |             SPARSHA Platform                |
+                                      |             SignBridge AI Platform                |
                                       +---------------------------------------------+
                                             /                                  \
                                            /                                    \
@@ -115,7 +115,7 @@ final project/
 │   └── main.tsx                        # React application entry point
 ├── supabase/
 │   └── migrations/
-│       └── 20261029000000_sparsha_schema.sql # PostgreSQL schema & RLS policies
+│       └── 20261029000000_SignBridge AI_schema.sql # PostgreSQL schema & RLS policies
 ├── .env.example                        # Template environment variables
 ├── vercel.json                         # Vercel SPA routing and security headers
 └── vite.config.ts                      # Vite & Vitest configuration
@@ -147,10 +147,10 @@ VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-supabase-public-anon-key
 VITE_GESTURE_CONFIDENCE_THRESHOLD=0.65
 ```
-*(Note: If left unconfigured, SPARSHA automatically runs in Local Sandbox Mode with full offline functionality).*
+*(Note: If left unconfigured, SignBridge AI automatically runs in Local Sandbox Mode with full offline functionality).*
 
 ### 3. Apply Database Migrations (Supabase)
-Run the SQL migration in `supabase/migrations/20261029000000_sparsha_schema.sql` via the Supabase Dashboard SQL Editor or Supabase CLI:
+Run the SQL migration in `supabase/migrations/20261029000000_SignBridge AI_schema.sql` via the Supabase Dashboard SQL Editor or Supabase CLI:
 ```bash
 supabase db push
 ```

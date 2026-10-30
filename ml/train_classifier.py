@@ -1,5 +1,5 @@
 """
-SPARSHA - Multi-Hand & Canonical Intrinsic ISL Classifier Training & Export Pipeline
+SignBridge AI - Multi-Hand & Canonical Intrinsic ISL Classifier Training & Export Pipeline
 Trains a calibrated neural network on 122-dimensional canonical intrinsic dual-hand & kinematic features,
 evaluating single-hand and two-hand classes separately, reporting precision/recall/F1/confusion matrix,
 and exporting weights for browser inference.

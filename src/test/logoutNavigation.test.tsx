@@ -31,7 +31,7 @@ describe('Logout Navigation and Route Protection', () => {
       recordHistory: true,
       createdAt: new Date().toISOString()
     };
-    localStorage.setItem('sparsha_auth_user', JSON.stringify(mockUser));
+    localStorage.setItem('signbridge_auth_user', JSON.stringify(mockUser));
 
     render(<App />);
 
@@ -57,7 +57,7 @@ describe('Logout Navigation and Route Protection', () => {
     expect(screen.getAllByRole('button', { name: /^Sign In$/i }).length).toBeGreaterThanOrEqual(1);
 
     // Session cleared from storage
-    expect(localStorage.getItem('sparsha_auth_user')).toBeNull();
+    expect(localStorage.getItem('signbridge_auth_user')).toBeNull();
   });
 
   it('allows user to navigate to Dashboard and log out from Dashboard back to Welcome', async () => {
@@ -69,7 +69,7 @@ describe('Logout Navigation and Route Protection', () => {
       recordHistory: true,
       createdAt: new Date().toISOString()
     };
-    localStorage.setItem('sparsha_auth_user', JSON.stringify(mockUser));
+    localStorage.setItem('signbridge_auth_user', JSON.stringify(mockUser));
 
     render(<App />);
 
@@ -109,7 +109,7 @@ describe('Logout Navigation and Route Protection', () => {
       recordHistory: true,
       createdAt: new Date().toISOString()
     };
-    localStorage.setItem('sparsha_auth_user', JSON.stringify(mockUser));
+    localStorage.setItem('signbridge_auth_user', JSON.stringify(mockUser));
 
     const { unmount } = render(<App />);
 
@@ -184,7 +184,7 @@ describe('Logout Navigation and Route Protection', () => {
     const modalForm = emailInput.closest('form')!;
     const modalSubmitBtn = modalForm.querySelector('button[type="submit"]')!;
 
-    fireEvent.change(emailInput, { target: { value: 'returning@sparsha.org' } });
+    fireEvent.change(emailInput, { target: { value: 'returning@signbridge.org' } });
     fireEvent.change(passwordInput, { target: { value: 'password123' } });
     fireEvent.click(modalSubmitBtn);
 

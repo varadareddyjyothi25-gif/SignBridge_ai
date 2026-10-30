@@ -14,7 +14,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_USER_KEY = 'sparsha_auth_user';
+const LOCAL_USER_KEY = 'signbridge_auth_user';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser({
               id: session.user.id,
               email: session.user.email || '',
-              fullName: session.user.user_metadata?.full_name || 'SPARSHA User',
+              fullName: session.user.user_metadata?.full_name || 'SignBridge AI User',
               preferredHand: 'right',
               recordHistory: true,
               createdAt: session.user.created_at || new Date().toISOString()
@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser({
             id: session.user.id,
             email: session.user.email || '',
-            fullName: session.user.user_metadata?.full_name || 'SPARSHA User',
+            fullName: session.user.user_metadata?.full_name || 'SignBridge AI User',
             preferredHand: 'right',
             recordHistory: true,
             createdAt: session.user.created_at || new Date().toISOString()
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const profile: UserProfile = {
             id: data.user.id,
             email: data.user.email || email,
-            fullName: data.user.user_metadata?.full_name || 'SPARSHA User',
+            fullName: data.user.user_metadata?.full_name || 'SignBridge AI User',
             preferredHand: 'right',
             recordHistory: true,
             createdAt: data.user.created_at || new Date().toISOString()

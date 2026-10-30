@@ -47,7 +47,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             'Registration successful! Please check your email inbox to verify your account before signing in.'
           );
         } else {
-          setSuccessMessage('Welcome to SPARSHA! Your account has been created.');
+          setSuccessMessage('Welcome to SignBridge AI! Your account has been created.');
           setTimeout(() => {
             onClose();
           }, 1000);
@@ -97,16 +97,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Modal Title & Brand */}
         <div className="mb-6 text-center">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-white p-1 border border-slate-200/80 shadow-sm flex items-center justify-center mb-3">
-            <img src="/logo.png" alt="SPARSHA Logo" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="SignBridge AI Logo" className="w-full h-full object-contain" />
           </div>
           <h2 id="auth-modal-title" className="text-2xl font-bold text-slate-900">
-            {mode === 'signin' && 'Sign In to SPARSHA'}
+            {mode === 'signin' && 'Sign In to SignBridge AI'}
             {mode === 'signup' && 'Create Your Account'}
             {mode === 'forgot' && 'Reset Password'}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             {mode === 'signin' && 'Access your ISL learning history and saved sign entries.'}
-            {mode === 'signup' && 'Join SPARSHA to customize dominant-hand orientation and track progress.'}
+            {mode === 'signup' && 'Join SignBridge AI to customize dominant-hand orientation and track progress.'}
             {mode === 'forgot' && 'Enter your email to receive a secure recovery link.'}
           </p>
         </div>

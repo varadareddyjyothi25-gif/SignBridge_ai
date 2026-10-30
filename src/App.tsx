@@ -89,7 +89,7 @@ const AppContent: React.FC = () => {
       return (
         <div className="py-24 text-center space-y-3">
           <div className="w-8 h-8 border-3 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-medium text-slate-500">Loading SPARSHA...</p>
+          <p className="text-sm font-medium text-slate-500">Loading SignBridge AI...</p>
         </div>
       );
     }
@@ -166,8 +166,8 @@ const AppContent: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 mt-auto py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="SPARSHA Logo" className="w-5 h-5 object-contain" />
-            <span className="font-bold text-slate-800">SPARSHA</span>
+            <img src="/logo.png" alt="SignBridge AI Logo" className="w-5 h-5 object-contain" />
+            <span className="font-bold text-slate-800">SignBridge AI</span>
             <span>—</span>
             <span>Transforming Oral Understanding into Clear HandSigns</span>
           </div>

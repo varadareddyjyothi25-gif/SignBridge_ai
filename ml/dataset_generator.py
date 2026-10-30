@@ -1,5 +1,5 @@
 """
-SPARSHA - Advanced Multi-Hand, Canonical Intrinsic & Temporal ISL Landmark Dataset Generator
+SignBridge AI - Advanced Multi-Hand, Canonical Intrinsic & Temporal ISL Landmark Dataset Generator
 Generates realistic, standardized 3D coordinate samples for validated Indian Sign Language (ISL)
 signs supporting single-hand gestures (both right and left hands), two-hand coordinated gestures,
 tilt variations, and kinematic motion sequences.

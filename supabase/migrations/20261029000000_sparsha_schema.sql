@@ -1,4 +1,4 @@
--- SPARSHA (TOUCH) Accessibility Platform
+-- SignBridge AI (TOUCH) Accessibility Platform
 -- Supabase PostgreSQL Database Migration
 -- Defines schemas for profiles, sign_dictionary, recognition_history, and saved_signs
 -- Includes comprehensive Row Level Security (RLS) policies

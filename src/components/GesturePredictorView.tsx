@@ -19,7 +19,7 @@ import {
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 import { defaultClassifier, type ClassificationResult } from '../ml/islClassifier';
 import type { LandmarkPoint, MotionData } from '../ml/featureExtractor';
-import { SparshaDataService } from '../lib/supabase';
+import { SignBridgeDataService } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
 // Hand landmark 21-point connections
@@ -470,7 +470,7 @@ export const GesturePredictorView: React.FC = () => {
   const handleSaveToHistory = async () => {
     if (!prediction || !prediction.isRecognized || !user) return;
 
-    await SparshaDataService.addHistory(
+    await SignBridgeDataService.addHistory(
       user.id,
       prediction.label,
       prediction.confidence,
@@ -492,11 +492,10 @@ export const GesturePredictorView: React.FC = () => {
               ISL Two-Hand Model v2
             </span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${
-                isModelReady
+              className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${isModelReady
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-amber-50 text-amber-700 border-amber-200'
-              }`}
+                }`}
             >
               {isModelReady ? '• Model Ready' : '• Loading Model...'}
             </span>
@@ -526,34 +525,30 @@ export const GesturePredictorView: React.FC = () => {
               ref={videoRef}
               playsInline
               muted
-              className={`absolute inset-0 w-full h-full object-cover ${
-                facingMode === 'user' ? '-scale-x-100' : ''
-              } ${cameraStatus === 'running' ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 w-full h-full object-cover ${facingMode === 'user' ? '-scale-x-100' : ''
+                } ${cameraStatus === 'running' ? 'opacity-100' : 'opacity-0'}`}
             />
 
             {/* Canvas Landmark Overlay */}
             <canvas
               ref={canvasRef}
-              className={`absolute inset-0 w-full h-full pointer-events-none ${
-                cameraStatus === 'running' ? 'opacity-100' : 'opacity-0'
-              }`}
+              className={`absolute inset-0 w-full h-full pointer-events-none ${cameraStatus === 'running' ? 'opacity-100' : 'opacity-0'
+                }`}
             />
 
             {/* Hand presence indicator */}
             {cameraStatus === 'running' && (
               <div
-                className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 backdrop-blur-md ${
-                  detectedHandCount === 2
+                className={`absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-medium flex items-center gap-2 backdrop-blur-md ${detectedHandCount === 2
                     ? 'bg-purple-600/90 text-white shadow-sm'
                     : detectedHandCount === 1
-                    ? 'bg-emerald-600/90 text-white shadow-sm'
-                    : 'bg-slate-800/80 text-slate-300'
-                }`}
+                      ? 'bg-emerald-600/90 text-white shadow-sm'
+                      : 'bg-slate-800/80 text-slate-300'
+                  }`}
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${
-                    detectedHandCount > 0 ? 'bg-white animate-pulse' : 'bg-slate-400'
-                  }`}
+                  className={`w-2 h-2 rounded-full ${detectedHandCount > 0 ? 'bg-white animate-pulse' : 'bg-slate-400'
+                    }`}
                 />
                 <span className="flex items-center gap-1">
                   {detectedHandCount === 2 ? (
@@ -597,14 +592,14 @@ export const GesturePredictorView: React.FC = () => {
                   cameraStatus === 'already_in_use' ||
                   cameraStatus === 'insecure_origin' ||
                   cameraStatus === 'model_error') && (
-                  <div className="space-y-3 text-red-300 bg-red-950/60 p-4 rounded-xl border border-red-800/60">
-                    <AlertTriangle className="w-8 h-8 mx-auto text-red-400" />
-                    <h3 className="font-semibold text-sm text-red-200">
-                      Camera Unavailable
-                    </h3>
-                    <p className="text-xs leading-relaxed">{errorMessage}</p>
-                  </div>
-                )}
+                    <div className="space-y-3 text-red-300 bg-red-950/60 p-4 rounded-xl border border-red-800/60">
+                      <AlertTriangle className="w-8 h-8 mx-auto text-red-400" />
+                      <h3 className="font-semibold text-sm text-red-200">
+                        Camera Unavailable
+                      </h3>
+                      <p className="text-xs leading-relaxed">{errorMessage}</p>
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -643,11 +638,10 @@ export const GesturePredictorView: React.FC = () => {
 
                   <button
                     onClick={() => setShowLandmarkOverlay((prev) => !prev)}
-                    className={`px-3 py-2 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-colors ${
-                      showLandmarkOverlay
+                    className={`px-3 py-2 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-colors ${showLandmarkOverlay
                         ? 'bg-slate-100 text-slate-800 border-slate-300'
                         : 'bg-white text-slate-400 border-slate-200'
-                    }`}
+                      }`}
                     title="Toggle hand skeletal landmarks overlay"
                   >
                     {showLandmarkOverlay ? <Eye className="w-3.5 h-3.5 text-brand-600" /> : <EyeOff className="w-3.5 h-3.5" />}
@@ -656,11 +650,10 @@ export const GesturePredictorView: React.FC = () => {
 
                   <button
                     onClick={() => setShowDiagnostics((prev) => !prev)}
-                    className={`px-3 py-2 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-colors ${
-                      showDiagnostics
+                    className={`px-3 py-2 rounded-xl border text-sm font-medium flex items-center gap-1.5 transition-colors ${showDiagnostics
                         ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                         : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                    }`}
+                      }`}
                     title="Toggle live engineering diagnostics and model telemetry"
                   >
                     <Activity className="w-3.5 h-3.5 text-brand-400" />
@@ -718,11 +711,10 @@ export const GesturePredictorView: React.FC = () => {
             {prediction ? (
               <div className="space-y-4">
                 <div
-                  className={`p-4 rounded-xl border ${
-                    prediction.isRecognized
+                  className={`p-4 rounded-xl border ${prediction.isRecognized
                       ? 'bg-emerald-50/70 border-emerald-200'
                       : 'bg-amber-50/70 border-amber-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -730,20 +722,18 @@ export const GesturePredictorView: React.FC = () => {
                         Prediction
                       </span>
                       <h4
-                        className={`text-2xl font-bold mt-0.5 ${
-                          prediction.isRecognized ? 'text-emerald-900' : 'text-amber-900'
-                        }`}
+                        className={`text-2xl font-bold mt-0.5 ${prediction.isRecognized ? 'text-emerald-900' : 'text-amber-900'
+                          }`}
                       >
                         {prediction.displayName}
                       </h4>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          prediction.isRecognized
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${prediction.isRecognized
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-amber-100 text-amber-800'
-                        }`}
+                          }`}
                       >
                         {prediction.isRecognized ? 'Validated ISL' : 'Below Threshold'}
                       </span>
@@ -765,9 +755,8 @@ export const GesturePredictorView: React.FC = () => {
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-300 ${
-                          prediction.isRecognized ? 'bg-emerald-600' : 'bg-amber-500'
-                        }`}
+                        className={`h-full transition-all duration-300 ${prediction.isRecognized ? 'bg-emerald-600' : 'bg-amber-500'
+                          }`}
                         style={{ width: `${Math.min(100, prediction.confidence * 100)}%` }}
                       />
                     </div>
@@ -865,11 +854,10 @@ export const GesturePredictorView: React.FC = () => {
                       {prediction.consensusBuffer.map((c, idx) => (
                         <span
                           key={idx}
-                          className={`px-1.5 py-0.5 rounded text-[10px] ${
-                            c === 'UNKNOWN'
+                          className={`px-1.5 py-0.5 rounded text-[10px] ${c === 'UNKNOWN'
                               ? 'bg-slate-800 text-slate-400'
                               : 'bg-brand-950 text-brand-300 border border-brand-800'
-                          }`}
+                            }`}
                         >
                           {c}
                         </span>

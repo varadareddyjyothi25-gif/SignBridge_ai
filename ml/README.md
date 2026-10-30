@@ -1,9 +1,9 @@
-# SPARSHA AI & Machine Learning Pipeline
+# SignBridge AI AI & Machine Learning Pipeline
 
 ## Overview
-SPARSHA (Transforming Oral Understanding into Clear HandSigns) integrates an end-to-end, scientifically grounded computer-vision and landmark classification pipeline specifically calibrated for **Indian Sign Language (ISL)**.
+SignBridge AI (Transforming Oral Understanding into Clear HandSigns) integrates an end-to-end, scientifically grounded computer-vision and landmark classification pipeline specifically calibrated for **Indian Sign Language (ISL)**.
 
-Unlike generic gesture detectors that misclassify or fabricate sign language vocabulary, SPARSHA uses a multi-stage architecture:
+Unlike generic gesture detectors that misclassify or fabricate sign language vocabulary, SignBridge AI uses a multi-stage architecture:
 1. **Detection & Pose Tracking:** MediaPipe Tasks Vision (`@mediapipe/tasks-vision`) extracts 21 3-dimensional landmarks per hand.
 2. **Geometric Normalization:**
    - **Translation Invariance:** The wrist landmark (index 0) is centered at the coordinate origin `(0, 0, 0)`.

@@ -69,12 +69,12 @@ export const Navigation: React.FC<NavigationProps> = ({
           className="flex items-center gap-3 cursor-pointer group"
         >
           <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 p-0.5 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
-            <img src="/logo.png" alt="SPARSHA Logo" className="w-full h-full object-contain" />
+            <img src="/logo.png" alt="SignBridge AI Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-slate-900 tracking-tight text-lg">
-                SPARSHA
+                SignBridge AI
               </span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
                 TOUCH
@@ -95,11 +95,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors ${
-                  isActive
+                className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors ${isActive
                     ? 'bg-brand-50 text-brand-700'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
@@ -112,11 +111,10 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div className="hidden md:flex items-center gap-3">
           {/* Supabase status badge */}
           <div
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
-              isSupabaseConfigured
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border ${isSupabaseConfigured
                 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                 : 'bg-slate-100 text-slate-600 border-slate-200'
-            }`}
+              }`}
             title={
               isSupabaseConfigured
                 ? 'Connected to production Supabase cloud database'
@@ -146,11 +144,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
-                className={`p-2 rounded-lg transition-colors ${
-                  isLoggingOut
+                className={`p-2 rounded-lg transition-colors ${isLoggingOut
                     ? 'opacity-60 cursor-not-allowed text-slate-400 bg-slate-100'
                     : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-                }`}
+                  }`}
                 title={isLoggingOut ? 'Signing out...' : 'Sign out'}
                 aria-label={isLoggingOut ? 'Signing out...' : 'Sign out'}
               >
@@ -201,11 +198,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavClick(item.id)}
-                className={`w-full px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${
-                  isActive
+                className={`w-full px-3 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-colors ${isActive
                     ? 'bg-brand-50 text-brand-700'
                     : 'text-slate-600 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 <span>{item.label}</span>
@@ -218,11 +214,10 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 onClick={handleSignOut}
                 disabled={isLoggingOut}
-                className={`w-full py-2.5 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors ${
-                  isLoggingOut
+                className={`w-full py-2.5 text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors ${isLoggingOut
                     ? 'opacity-60 cursor-not-allowed text-slate-400 bg-slate-100'
                     : 'text-red-600 hover:bg-red-50'
-                }`}
+                  }`}
                 aria-label={isLoggingOut ? 'Signing out...' : 'Sign out'}
               >
                 {isLoggingOut ? (

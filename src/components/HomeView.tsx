@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Camera, BookOpen, Clock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { SparshaDataService, type RecognitionHistoryItem } from '../lib/supabase';
+import { SignBridgeDataService, type RecognitionHistoryItem } from '../lib/supabase';
 import type { ActiveTab } from './Navigation';
 
 interface HomeViewProps {
@@ -16,7 +16,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
     if (!user) return;
     async function fetchRecent() {
       if (user) {
-        const hist = await SparshaDataService.getHistory(user.id);
+        const hist = await SignBridgeDataService.getHistory(user.id);
         setRecentHistory(hist.slice(0, 4));
       }
     }

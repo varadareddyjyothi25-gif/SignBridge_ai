@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, ShieldCheck, BookOpen, CheckCircle2 } from 'lucide-react';
 import { VALIDATED_ISL_DICTIONARY, type ISLSignEntry } from '../ml/dictionaryData';
 import { SignVisualizer } from './SignVisualizer';
-import { SparshaDataService } from '../lib/supabase';
+import { SignBridgeDataService } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
 export const LearningLibraryView: React.FC = () => {
@@ -13,12 +13,12 @@ export const LearningLibraryView: React.FC = () => {
   const [completedSignIds, setCompletedSignIds] = useState<string[]>(() => {
     if (!user) return [];
     try {
-      const stored = localStorage.getItem('sparsha_completed_learning');
+      const stored = localStorage.getItem('signbridge_completed_learning') || localStorage.getItem('sparsha_completed_learning');
       if (stored) {
         const map = JSON.parse(stored);
         return map[user.id] || [];
       }
-    } catch {}
+    } catch { }
     return [];
   });
 
@@ -36,7 +36,7 @@ export const LearningLibraryView: React.FC = () => {
 
   const handleCompleteSign = (signId: string) => {
     if (!user) return;
-    SparshaDataService.markLearningCompleted(user.id, signId);
+    SignBridgeDataService.markLearningCompleted(user.id, signId);
     setCompletedSignIds((prev) => (prev.includes(signId) ? prev : [...prev, signId]));
   };
 
@@ -81,11 +81,10 @@ export const LearningLibraryView: React.FC = () => {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedCategory === cat
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors ${selectedCategory === cat
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                  }`}
               >
                 {cat}
               </button>

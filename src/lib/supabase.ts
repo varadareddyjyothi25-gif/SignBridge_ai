@@ -12,7 +12,7 @@ export const isSupabaseConfigured = Boolean(
 
 // Real client or graceful placeholder
 export const supabase: SupabaseClient = createClient(
-  isSupabaseConfigured ? supabaseUrl : 'https://sparsha-mock.supabase.co',
+  isSupabaseConfigured ? supabaseUrl : 'https://signbridge-mock.supabase.co',
   isSupabaseConfigured ? supabaseAnonKey : 'mock-anon-key'
 );
 
@@ -44,22 +44,22 @@ export interface SavedSignItem {
 
 // Local mock storage for offline / unconfigured environments so user can test immediately
 const LOCAL_STORAGE_KEYS = {
-  USER_SESSION: 'sparsha_user_session',
-  PROFILES: 'sparsha_profiles',
-  HISTORY: 'sparsha_history',
-  SAVED_SIGNS: 'sparsha_saved_signs',
-  LEARNING_COMPLETED: 'sparsha_completed_learning'
+  USER_SESSION: 'signbridge_user_session',
+  PROFILES: 'signbridge_profiles',
+  HISTORY: 'signbridge_history',
+  SAVED_SIGNS: 'signbridge_saved_signs',
+  LEARNING_COMPLETED: 'signbridge_completed_learning'
 };
 
-export class SparshaDataService {
+export class SignBridgeDataService {
   // Check if active Supabase connection or local fallback
   static isLiveBackend(): boolean {
     return isSupabaseConfigured;
   }
 
   // --- Recognition History ---
-  static async getHistory(userId: string): Promise<RecognitionHistoryItem[]> {
-    if (isSupabaseConfigured) {
+  static async getHistory(userId: string): Promise < RecognitionHistoryItem[] > {
+    if(isSupabaseConfigured) {
       try {
         const { data, error } = await supabase
           .from('recognition_history')
@@ -84,7 +84,7 @@ export class SparshaDataService {
     // Local fallback
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.HISTORY);
-      if (!stored) return [];
+      if(!stored) return [];
       const all: RecognitionHistoryItem[] = JSON.parse(stored);
       return all.filter(item => item.userId === userId);
     } catch {
@@ -97,7 +97,7 @@ export class SparshaDataService {
     signLabel: string,
     confidenceScore: number,
     handUsed: 'right' | 'left' = 'right'
-  ): Promise<RecognitionHistoryItem | null> {
+  ): Promise < RecognitionHistoryItem | null > {
     const newItem: RecognitionHistoryItem = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       userId,
@@ -107,7 +107,7 @@ export class SparshaDataService {
       recognizedAt: new Date().toISOString()
     };
 
-    if (isSupabaseConfigured) {
+    if(isSupabaseConfigured) {
       try {
         const { data, error } = await supabase
           .from('recognition_history')
@@ -146,8 +146,8 @@ export class SparshaDataService {
     }
   }
 
-  static async clearHistory(userId: string): Promise<boolean> {
-    if (isSupabaseConfigured) {
+  static async clearHistory(userId: string): Promise < boolean > {
+    if(isSupabaseConfigured) {
       try {
         const { error } = await supabase
           .from('recognition_history')
@@ -161,7 +161,7 @@ export class SparshaDataService {
 
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.HISTORY);
-      if (stored) {
+      if(stored) {
         const list: RecognitionHistoryItem[] = JSON.parse(stored);
         const filtered = list.filter(item => item.userId !== userId);
         localStorage.setItem(LOCAL_STORAGE_KEYS.HISTORY, JSON.stringify(filtered));
@@ -173,8 +173,8 @@ export class SparshaDataService {
   }
 
   // --- Saved Signs ---
-  static async getSavedSigns(userId: string): Promise<SavedSignItem[]> {
-    if (isSupabaseConfigured) {
+  static async getSavedSigns(userId: string): Promise < SavedSignItem[] > {
+    if(isSupabaseConfigured) {
       try {
         const { data, error } = await supabase
           .from('saved_signs')
@@ -195,7 +195,7 @@ export class SparshaDataService {
 
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.SAVED_SIGNS);
-      if (!stored) return [];
+      if(!stored) return [];
       const list: SavedSignItem[] = JSON.parse(stored);
       return list.filter(item => item.userId === userId);
     } catch {
@@ -203,11 +203,11 @@ export class SparshaDataService {
     }
   }
 
-  static async toggleSavedSign(userId: string, signId: string): Promise<boolean> {
+  static async toggleSavedSign(userId: string, signId: string): Promise < boolean > {
     const existing = await this.getSavedSigns(userId);
     const found = existing.find(item => item.signId === signId);
 
-    if (found) {
+    if(found) {
       // Remove
       if (isSupabaseConfigured) {
         try {
@@ -233,7 +233,7 @@ export class SparshaDataService {
         signId,
         savedAt: new Date().toISOString()
       };
-      if (isSupabaseConfigured) {
+      if(isSupabaseConfigured) {
         try {
           await supabase.from('saved_signs').insert({
             user_id: userId,
@@ -267,13 +267,15 @@ export class SparshaDataService {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEYS.LEARNING_COMPLETED);
       const map: { [userId: string]: string[] } = stored ? JSON.parse(stored) : {};
-      if (!map[userId]) map[userId] = [];
-      if (!map[userId].includes(signId)) {
-        map[userId].push(signId);
-        localStorage.setItem(LOCAL_STORAGE_KEYS.LEARNING_COMPLETED, JSON.stringify(map));
-      }
+  if (!map[userId]) map[userId] = [];
+  if (!map[userId].includes(signId)) {
+    map[userId].push(signId);
+    localStorage.setItem(LOCAL_STORAGE_KEYS.LEARNING_COMPLETED, JSON.stringify(map));
+  }
     } catch (e) {
       console.warn('Could not record learning progress:', e);
     }
   }
 }
+
+export { SignBridgeDataService as SparshaDataService, SignBridgeDataService as SignBridgeAIDataService };
